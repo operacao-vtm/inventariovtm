@@ -48,9 +48,9 @@ h1 small{display:block;font-size:11px;color:var(--mut);font-weight:400;letter-sp
 .tabs>button .bdg{background:var(--bad);color:#fff;border-radius:9px;padding:0 6px;font-size:11px;margin-left:5px}
 main{padding:16px;max-width:1500px;margin:0 auto}
 .view{display:none}.view.on{display:block}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
-.kpi{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:8px;padding:12px}
-.kpi b{display:block;font-size:26px;line-height:1.1}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:7px;margin-bottom:12px}
+.kpi{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:8px;padding:9px 11px}
+.kpi b{display:block;font-size:19px;line-height:1.15}
 .kpi span{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px}
 .kpi{cursor:pointer;transition:.15s}
 .kpi:hover{background:var(--card2);border-color:var(--acc);transform:translateY(-1px)}
@@ -65,6 +65,19 @@ main{padding:16px;max-width:1500px;margin:0 auto}
 .exp{display:inline-block;width:14px;color:var(--acc);font-size:11px;cursor:pointer}
 .exp:hover{color:#2ee0c3}
 #tbSit td.cel:hover{background:rgba(25,194,168,.22);outline:1px solid var(--acc)}
+/* Coluna Total: a barra de proporção por categoria virou o fundo da própria
+   célula. Substitui o card "Distribuição por categoria", que repetia estes
+   mesmos números ocupando uma tela inteira. */
+#tbSit td.prop{position:relative;isolation:isolate}
+#tbSit td.prop::before{content:'';position:absolute;left:0;top:3px;bottom:3px;width:var(--p);
+  background:linear-gradient(90deg,rgba(25,194,168,.42),rgba(25,194,168,.16));
+  border-left:2px solid var(--acc);border-radius:0 3px 3px 0;z-index:-1}
+#tbSit td.prop b{position:relative}
+/* Painel: números centralizados sob o próprio título da coluna.
+   A primeira coluna fica à esquerda porque é ali que o recuo distingue
+   a subcategoria da categoria — centralizar apagaria essa hierarquia. */
+#v-painel th,#v-painel td{text-align:center}
+#v-painel th:first-child,#v-painel td:first-child{text-align:left}
 .bars .cli{cursor:pointer}
 .bars .cli:hover .lb{color:var(--acc)}
 .bars .cli:hover .tk i{background:#2ee0c3}
@@ -249,14 +262,16 @@ header{position:relative;padding-bottom:26px}
   #relArea,#printArea{overflow-x:auto}
   .rel{padding:12px}
 
-  .kpis{grid-template-columns:1fr 1fr;gap:8px}
-  .kpi{padding:10px}
-  .kpi b{font-size:22px}
+  .kpis{grid-template-columns:repeat(4,1fr);gap:5px}
+  .kpi{padding:7px 6px;border-left-width:3px}
+  .kpi b{font-size:16px}
+  .kpi span{font-size:9px;letter-spacing:.2px}
+  .kpi .drill{display:none}
 }
 
 /* telas muito estreitas (até 400px) */
 @media(max-width:400px){
-  .kpis{grid-template-columns:1fr}
+  .kpis{grid-template-columns:repeat(3,1fr)}
   .file{grid-template-columns:1fr}
   .modal>div{padding:12px 11px}
 }
@@ -296,13 +311,9 @@ header{position:relative;padding-bottom:26px}
 <section id="v-painel" class="view on">
   <div class="kpis" id="kpis"></div>
   <div class="card">
-    <h2>Distribuição por categoria</h2>
-    <div class="bars" id="barsCat"></div>
-  </div>
-  <div class="card">
-    <h2>Situação por categoria</h2>
+    <h2>Status dos bens por categoria</h2>
     <div class="wrap" style="max-height:none">
-      <table><thead><tr><th>Categoria</th><th>Total</th><th>Ativo</th><th>Manutenção</th><th>Inoperante</th><th>Não localizado</th><th>Retirado</th><th>Ocor. abertas</th></tr></thead>
+      <table><thead id="thSit"></thead>
       <tbody id="tbSit"></tbody></table>
     </div>
   </div>
@@ -411,14 +422,15 @@ header{position:relative;padding-bottom:26px}
         <option value="com">Relatório completo (ficha por bem)</option>
         <option value="etq">Relatório de etiquetagem (local · equipamento · série)</option>
         <option value="per">Personalizado</option>
-        <option value="conj">Conjuntos completos (principal + secundários)</option>
+        <option value="conj">Conjuntos completos (principal + avulsos)</option>
+        <option value="avul">Avulsos (todos os itens avulsos)</option>
         <option value="subst">Substituições realizadas</option>
         <option value="cruz">Relatório cruzado (tabela de dupla entrada)</option>
       </select>
       <select id="rNivel" title="Que itens entram no relatório">
         <option value="princ">Só itens principais</option>
-        <option value="sec">Só itens secundários</option>
-        <option value="todos">Principais e secundários</option>
+        <option value="sec">Só avulsos</option>
+        <option value="todos">Principais e avulsos</option>
       </select>
       <select id="rCat"><option value="">Relatório consolidado (todas as categorias)</option></select>
       <select id="rSub"><option value="">Todas as subcategorias</option></select>
@@ -614,7 +626,7 @@ header{position:relative;padding-bottom:26px}
   <div class="bar" style="margin-top:14px;align-items:center">
     <button class="btn dg" id="mDel">Excluir</button>
     <span style="flex:1"></span>
-    <button class="btn gh" id="mNovoB">+ Novo item</button>
+    <button class="btn gh" id="mNovoB">+ Avulso</button>
     <button class="btn gh" id="mSubst">Substituir</button>
     <button class="btn gh" id="mHistBt">Histórico</button>
     <button class="btn gh" id="mImp">Imprimir</button>
@@ -627,7 +639,7 @@ header{position:relative;padding-bottom:26px}
 
 <!-- MODAL ITEM SECUNDÁRIO -->
 <div class="modal" id="mdSec"><div>
-  <h2 style="margin:0 0 4px;color:var(--acc);font-size:13px;letter-spacing:1px" id="secTit">INSERIR NOVO ITEM</h2>
+  <h2 style="margin:0 0 4px;color:var(--acc);font-size:13px;letter-spacing:1px" id="secTit">REGISTRAR AVULSO</h2>
   <div class="mut" id="secOnde" style="margin-bottom:12px"></div>
 
   <div class="bloco">
@@ -809,13 +821,30 @@ const FOTOS_BASE={"T1-TELA 1":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAA
 const FOTOS_NF_BASE={};
 </script>
 <script>
-const STATUS=["ATIVO","MANUTENÇÃO","INOPERANTE","NÃO LOCALIZADO","RETIRADO","SUBSTITUÍDO","DESCARTADO"];
+const STATUS=["ATIVO","AVULSO","MANUTENÇÃO","INOPERANTE","NÃO LOCALIZADO","RETIRADO","SUBSTITUÍDO"];
+/* os status que o sistema mostra: os da lista, mais qualquer um que exista
+   de fato nos registros — assim uma base antiga com DESCARTADO não some. */
+const statusEmUso=()=>[...STATUS,...bens.map(b=>b.status)]
+  .filter((v,i,a)=>v&&a.indexOf(v)===i);
+/* SUBSTITUÍDO não se escolhe à mão: quem grava é o comando Substituir.
+   Fora dos seletores, mas continua nos filtros, no painel e nos relatórios. */
+const STATUS_SIST=[];   /* nada fica fora dos seletores: a lista é a mesma em todo lugar */
+const STATUS_MAN=()=>STATUS.filter(t=>!STATUS_SIST.includes(t));
+/* preenche um seletor de status; se o registro já tem um status de sistema,
+   ele entra na lista só para poder ser exibido */
+function stSel(id,valor){
+  const el=document.getElementById(id);
+  const l=STATUS_MAN();
+  if(valor&&!l.includes(valor))l.push(valor);
+  el.innerHTML=opts(l);
+  el.value=valor||'ATIVO';
+}
 const MOTIVOS=["Queimou","Defeito","Vandalismo","Furto/extravio","Preventiva","Fim de vida útil","Outro"];
 const DESTINOS=["Descarte","Oficina","Estoque","Devolvido ao fornecedor","Outro"];
 const SIT=["ABERTA","EM ANDAMENTO","FECHADA"];
 const PRIOR=["BAIXA","MÉDIA","ALTA","URGENTE"];
 const TIPOS=["Falha de imagem","Tela sem sinal","Sem energia","Falha de conectividade","Vandalismo","Furto/extravio","Estrutura/suporte","Ventilação/superaquecimento","Player / TV Box","Outro"];
-const CATS=["TERMINAIS","ESTAÇÕES","PLATAFORMAS","TOTENS CLIENTES PRIVADOS","TV INDOOR","TELÃO LED","PLM","PMV","TV BUSÃO"];
+const CATS=["TERMINAIS","ESTAÇÕES","PLATAFORMAS","TOTENS CLIENTES PRIVADOS","TV INDOOR","TELÃO LED","PLM","PMV","TV BUSÃO","AVULSOS"];
 /* posições que um item pode ocupar dentro de um conjunto */
 const POSICOES=['PRINCIPAL','SECUNDÁRIO'];
 const TIPOSEC=['TV BOX','FONTE TV BOX','ROTEADOR','FONTE ROTEADOR','SPLITTER','FONTE SPLITTER','OUTRO'];
@@ -1398,7 +1427,7 @@ function selects(){
   document.getElementById('fCat').innerHTML='<option value="">Todas as categorias</option>'+opts(CATS);
   document.getElementById('rCat').innerHTML='<option value="">Relatório consolidado (todas as categorias)</option>'+opts(CATS);
   ['fSt','rSt'].forEach(i=>document.getElementById(i).innerHTML='<option value="">Todos os status</option>'+opts(STATUS));
-  ['viSt','mSt','ocStBem'].forEach(i=>document.getElementById(i).innerHTML=opts(STATUS));
+  ['viSt','mSt','ocStBem'].forEach(i=>stSel(i,'ATIVO'));
   ['ocTipo','oTipo'].forEach(i=>document.getElementById(i).innerHTML=opts(TIPOS));
   ['ocPri','oPri'].forEach(i=>document.getElementById(i).innerHTML=opts(PRIOR));
   document.getElementById('oSit').innerHTML=opts(SIT);
@@ -1425,6 +1454,15 @@ function montaSub(idSel,cat,rotulo){
   sel.value=(todas.includes(atual)||atual==='__sem')?atual:'';
   sel.style.display=todas.length?'':'none';
 }
+/* ---------- categoria AVULSOS ----------
+   Não é uma categoria do bem: é o recorte dos itens avulsos.
+   Fica num único lugar para valer em todos os modelos de relatório. */
+const CAT_AVUL='AVULSOS';
+const ehAvulso=b=>(b.pos||'PRINCIPAL')!=='PRINCIPAL';
+const catOk=(b,c)=>!c?true:b.cat===c;
+const soAvulsos=()=>document.getElementById('rCat').value===CAT_AVUL;
+const catsDo=(c,lista)=>c?[c]:CATS;
+
 /* categoria a que pertence uma subcategoria */
 function catDaSub(s){const b=bens.find(x=>x.sub===s);return b?b.cat:''}
 function rSubs(){ montaSub('rSub',document.getElementById('rCat').value,'Todas as subcategorias'); }
@@ -1434,7 +1472,7 @@ function locais(){
   const selSub=document.getElementById('fSub');
   montaSub('fSub',c,'Subcategoria');
   const sv=selSub.value;
-  const ls=[...new Set(bens.filter(b=>(!c||b.cat===c)&&(!sv||b.sub===sv)).map(b=>b.local))].sort();
+  const ls=[...new Set(bens.filter(b=>catOk(b,c)&&(!sv||b.sub===sv)).map(b=>b.local))].sort();
   document.getElementById('fLocal').innerHTML='<option value="">Localização</option>'+opts(ls);
   rSubs();
   document.getElementById('dlBens').innerHTML=bens.map(b=>`<option value="${esc(b.cod)}">${esc(b.local)}</option>`).join('');
@@ -1449,26 +1487,28 @@ function painel(){
   const n=s=>un(bens.filter(b=>b.status===s));
   const K=(cl,rot,val,arg)=>`<div class="kpi ${cl}" onclick='abrirRel(${JSON.stringify(arg)})' title="Clique para gerar o relatório">
      <span>${rot}</span><b>${val}</b><div class="drill">ver relatório ›</div></div>`;
+  const ST=statusEmUso();
+  const corSt={'ATIVO':'ok','AVULSO':'info','MANUTENÇÃO':'warn','INOPERANTE':'bad','NÃO LOCALIZADO':'info',
+               'RETIRADO':'info','SUBSTITUÍDO':'warn','DESCARTADO':'bad'};
+  const rotSt=t=>t.charAt(0)+t.slice(1).toLowerCase();
   document.getElementById('kpis').innerHTML=
-    K('', 'Total de bens', un(bens), {})
-   +K('ok','Ativos',un(bens.filter(b=>b.status==='ATIVO')),{st:'ATIVO'})
-   +K('warn','Em manutenção',n('MANUTENÇÃO'),{st:'MANUTENÇÃO'})
-   +K('bad','Inoperantes',n('INOPERANTE'),{st:'INOPERANTE'})
-   +K('info','Não localizados',n('NÃO LOCALIZADO'),{st:'NÃO LOCALIZADO'})
+    /* o total fecha com o TOTAL GERAL da tabela: principais + avulsos */
+    K('', 'Total de registros', un(bens), {})
+   +K('','Bens',un(bens.filter(b=>(b.pos||'PRINCIPAL')==='PRINCIPAL')),{nivel:'princ'})
+   +ST.map(t=>K(corSt[t]||'',rotSt(t),n(t),{st:t})).join('')
    +K('bad','Ocorrências abertas',abertas().length,{escopo:'ocorrencias',sitOc:'ABERTAS'})
    +K('ok','Ocorrências fechadas',ocor.filter(o=>o.sit==='FECHADA').length,{escopo:'ocorrencias',sitOc:'FECHADA'})
    +K('','Vistorias',vist.length,{escopo:'vistorias'});
 
-  let mx=1;const cc={};CATS.forEach(c=>{cc[c]=un(bens.filter(b=>b.cat===c));if(cc[c]>mx)mx=cc[c]});
-  document.getElementById('barsCat').innerHTML=CATS.map(c=>
-    `<div class="cli" onclick='abrirRel(${JSON.stringify({cat:c})})' title="Relatório de ${esc(c)}">
-      <div class="lb"><span>${c}</span><b>${cc[c]}</b></div><div class="tk"><i style="width:${cc[c]/mx*100}%"></i></div></div>`).join('');
+  /* a barra de proporção passou para dentro da coluna Total da tabela */
+  let mx=1;CATS.forEach(c=>{const v=un(bens.filter(b=>b.cat===c));if(v>mx)mx=v});
 
-  const COLS=[null,'ATIVO','MANUTENÇÃO','INOPERANTE','NÃO LOCALIZADO','RETIRADO'];
+  const COLS=[null,...ST];
+  document.getElementById('thSit').innerHTML=
+    '<tr><th>Categoria</th><th>Total</th>'+ST.map(t=>'<th>'+rotSt(t)+'</th>').join('')+'</tr>';
   const linha=(nome,cat,f,forte,sub,filho)=>{
     const g=s=>un(f.filter(x=>x.status===s));
-    const oc=abertas().filter(o=>f.some(x=>x.cod===o.cod)).length;
-    const vals=[un(f),g('ATIVO'),g('MANUTENÇÃO'),g('INOPERANTE'),g('NÃO LOCALIZADO'),g('RETIRADO')];
+    const vals=[un(f),...ST.map(g)];
     const base=sub?{cat,sub}:{cat};
     const nsub=(!filho&&cat)?subsDe(cat).length:0;
     const seta=nsub?`<span class="exp" onclick='event.stopPropagation();toggleSub(${JSON.stringify(cat)})'>${abertoSub[cat]?'▾':'▸'}</span> `:'';
@@ -1476,11 +1516,12 @@ function painel(){
     vals.forEach((v,i)=>{
       const arg=JSON.stringify(COLS[i]?Object.assign({st:COLS[i]},base):base);
       const txt=(i===0||forte)?'<b>'+v+'</b>':v;
-      td+= v ? `<td class="cel" onclick='abrirRel(${arg})' title="${COLS[i]?esc(COLS[i]):'Todos'} em ${esc(nome)}">${txt}</td>`
+      /* coluna Total: a proporção vira o próprio fundo da célula */
+      const prop=(i===0&&!forte&&v)?` style="--p:${Math.max(2,v/mx*100)}%"`:'';
+      const cls=(i===0&&!forte&&v)?'cel prop':'cel';
+      td+= v ? `<td class="${cls}"${prop} onclick='abrirRel(${arg})' title="${COLS[i]?esc(COLS[i]):'Todos'} em ${esc(nome)}">${txt}</td>`
              : `<td>${txt}</td>`;
     });
-    td+= oc ? `<td class="cel" onclick='abrirRel(${JSON.stringify(Object.assign({escopo:'ocorrencias',sitOc:'ABERTAS'},base))})' title="Ocorrências abertas em ${esc(nome)}">${forte?'<b>'+oc+'</b>':oc}</td>`
-            : `<td>${forte?'<b></b>':''}</td>`;
     return td;
   };
   document.getElementById('tbSit').innerHTML=
@@ -1531,6 +1572,8 @@ function abrirRel(o){
   rSubs();
   document.getElementById('rSub').value=o.sub||'';
   document.getElementById('rSt').value=(escopo==='bens'&&o.st)?o.st:'';
+  if(o.modelo)document.getElementById('rModelo').value=o.modelo;
+  if(o.nivel)document.getElementById('rNivel').value=o.nivel;
   document.querySelector('.tabs button[data-v="relatorio"]').click();
   chip();gerarRelatorio();
 }
@@ -1565,7 +1608,7 @@ function filtrar(){
   /* a lista mostra os conjuntos pelo elemento principal;
      os secundários aparecem ao expandir */
   const nivel=b=>(b.pos||'PRINCIPAL')==='PRINCIPAL';
-  return bens.filter(b=>vivo(b)&&nivel(b)&&(!c||b.cat===c)&&(!sb||(sb==='__sem'?!b.sub:b.sub===sb))&&(!l||b.local===l)&&(!s||b.status===s)&&noPeriodo(b)&&
+  return bens.filter(b=>vivo(b)&&nivel(b)&&catOk(b,c)&&(!sb||(sb==='__sem'?!b.sub:b.sub===sb))&&(!l||b.local===l)&&(!s||b.status===s)&&noPeriodo(b)&&
     (!q||campoBusca(b).includes(q)));
 }
 /* conjuntos abertos na lista */
@@ -1659,11 +1702,10 @@ function abrirSec(cod,id){
   v('secSerie',b?(b.serie||''):''); v('secQtd',b?(b.qtd||1):1);
   v('secNf',b?(b.nf||''):''); v('secNfData',b?(b.nfData||''):'');
   v('secValor',b?(b.valor||''):''); v('secObs',b?(b.obs||''):'');
-  document.getElementById('secSt').innerHTML=opts(STATUS);
-  document.getElementById('secSt').value=b?b.status:'ATIVO';
+  stSel('secSt',b?b.status:'AVULSO');
   secOutroVis();
   document.getElementById('lbSecObs').style.display=(b&&b.obs)?'':'none';
-  document.getElementById('secTit').textContent=b?(ehPrinc?'ITEM PRINCIPAL':'ITEM SECUNDÁRIO'):'INSERIR NOVO ITEM';
+  document.getElementById('secTit').textContent=b?(ehPrinc?'ITEM PRINCIPAL':'AVULSO'):'REGISTRAR AVULSO';
   document.getElementById('secOnde').textContent=pai.cod+' · '+(pai.local||pai.cat);
   document.getElementById('secDel').style.display=b?'':'none';
   document.getElementById('secSalv').textContent='Salvar item';
@@ -1685,7 +1727,7 @@ function secSubstituir(){
   document.getElementById('lbSecOutro').style.display='none';
   ['secMarca','secModelo','secSerie','secNf','secValor','secObs'].forEach(i=>v(i,''));
   v('secNfData',''); v('secQtd',a.qtd||1);
-  document.getElementById('secSt').value='ATIVO';
+  stSel('secSt','ATIVO');
   document.getElementById('lbSecObs').style.display='none';
   document.getElementById('secSubMot').innerHTML=opts(MOTIVOS);
   document.getElementById('secSubDest').innerHTML=opts(DESTINOS);
@@ -1696,7 +1738,7 @@ function secSubstituir(){
     `Substituindo <b>${esc(a.tipo||'')}</b>${a.marca?' '+esc(a.marca):''}${a.modelo?' '+esc(a.modelo):''}`+
     `${a.serie?' · série '+esc(a.serie):''}`;
   document.getElementById('blSecSub').style.display='';
-  document.getElementById('secTit').textContent='SUBSTITUIR ITEM';
+  document.getElementById('secTit').textContent='SUBSTITUIR AVULSO';
   document.getElementById('secDel').style.display='none';
   document.getElementById('secSalv').textContent='Salvar substituição';
   toast('Informe o equipamento NOVO — o antigo será baixado automaticamente');
@@ -1738,7 +1780,7 @@ document.getElementById('secSalv').onclick=()=>{
       id:Math.max(0,...bens.map(b=>b.id))+1,
       cod:secConj.cod, conj:secConj.cod,
       pos:secSubDe?(bens.find(x=>x.id===secSubDe).pos||'PRINCIPAL'):'SECUNDÁRIO',
-      cat:secConj.cat, sub:secConj.sub||'', local:secConj.local||'', end:secConj.end||'',
+      cat:CAT_AVUL, sub:(dados.tipo||'OUTRO'), local:secConj.local||'', end:secConj.end||'',
       orient:'', patrim:'', dim:'', fotoUrl:''
     },dados);
     if(secSubDe){
@@ -1919,7 +1961,7 @@ function editarBem(id){
   document.getElementById('mTit').textContent=b?'BEM · '+b.cod:'INSERIR NOVO BEM';
   const v=(i,x)=>document.getElementById(i).value=x;
   v('mCod',b?b.cod:'');v('mCat',b?b.cat:CATS[0]);v('mLocal',b?b.local:'');
-  v('mEnd',b?b.end:'');v('mOri',b?(b.orient||''):'');v('mSt',b?b.status:'ATIVO');v('mObs',b?(b.obs||''):'');
+  v('mEnd',b?b.end:'');v('mOri',b?(b.orient||''):'');stSel('mSt',b?b.status:'ATIVO');v('mObs',b?(b.obs||''):'');
   v('mFotoUrl',b?(b.fotoUrl||''):'');v('mFotoNfUrl',b?(b.fotoNfUrl||''):'');
 
   ['tipo','marca','modelo','dim','serie','patrim','nfEmissor','nf','nfData','valor'].forEach(k=>
@@ -1944,13 +1986,13 @@ function editarBem(id){
   if(b&&(b.pos||'PRINCIPAL')==='PRINCIPAL'){
     const secs=secundariosDe(b.cod);
     const cc=esc(b.cod).replace(/'/g,"\\'");
-    mdC.innerHTML=`<label>Itens secundários de ${esc(b.cod)} (${secs.length})</label>`+
+    mdC.innerHTML=`<label>Avulsos de ${esc(b.cod)} (${secs.length})</label>`+
       (secs.length?`<div class="hist">`+secs.map(x=>
         `<div><b>${esc(x.tipo||'')}</b>${x.marca?' · '+esc(x.marca):''}${x.modelo?' '+esc(x.modelo):''}`+
         `${x.serie?' · série '+esc(x.serie):''}${(x.qtd||1)>1?' · '+x.qtd+' un':''}`+
         ` <button class="btn sm gh" onclick="abrirSec('${cc}',${x.id})">abrir</button></div>`).join('')+`</div>`
-        :`<div class="mut">Nenhum item secundário registrado.</div>`)+
-      `<div style="margin-top:8px"><button class="btn gh sm" onclick="abrirSec('${cc}')">+ Incluir item secundário</button></div>`;
+        :`<div class="mut">Nenhum avulso registrado.</div>`)+
+      `<div style="margin-top:8px"><button class="btn gh sm" onclick="abrirSec('${cc}')">+ Incluir avulso</button></div>`;
   } else mdC.innerHTML='';
   const os=b?ocor.filter(o=>o.cod===b.cod):[];
   document.getElementById('mHist').innerHTML=os.length?
@@ -1998,7 +2040,7 @@ function editarBem(id){
     (b&&!substId&&b.status!=='SUBSTITUÍDO'&&b.status!=='DESCARTADO')?'':'none';
   document.getElementById('mHistBt').style.display = (b&&!substId)?'':'none';
   document.getElementById('mNovoB').textContent =
-    (b&&!substId&&(b.pos||'PRINCIPAL')==='PRINCIPAL')?'+ Novo item em '+b.cod:'+ Novo';
+    (b&&!substId&&(b.pos||'PRINCIPAL')==='PRINCIPAL')?'+ Avulso em '+b.cod:'+ Avulso';
   document.getElementById('mdBem').classList.add('on');
 }
 
@@ -2620,7 +2662,7 @@ function fecharRel(h,texto,qtd,rotulo){
 }
 function relOcorrencias(){
   const c=document.getElementById('rCat').value, sb=document.getElementById('rSub').value;
-  const codsCat=(c||sb)?new Set(bens.filter(b=>(!c||b.cat===c)&&(!sb||b.sub===sb)).map(b=>b.cod)):null;
+  const codsCat=(c||sb)?new Set(bens.filter(b=>catOk(b,c)&&(!sb||b.sub===sb)).map(b=>b.cod)):null;
   const lista=ocor.filter(o=>(sitOc==='FECHADA'?o.sit==='FECHADA':o.sit!=='FECHADA')&&(!codsCat||codsCat.has(o.cod))&&noPer(dataRef(o)));
   const rotulo=sitOc==='FECHADA'?'fechadas':'abertas e em andamento';
   let h=cab('Relatório de Ocorrências — '+rotulo, [c||'todas as categorias',sb,perTxt()].filter(Boolean).join(' · '));
@@ -2655,7 +2697,7 @@ function relOcorrencias(){
 }
 function relVistorias(){
   const c=document.getElementById('rCat').value, sb=document.getElementById('rSub').value;
-  const codsCat=(c||sb)?new Set(bens.filter(b=>(!c||b.cat===c)&&(!sb||b.sub===sb)).map(b=>b.cod)):null;
+  const codsCat=(c||sb)?new Set(bens.filter(b=>catOk(b,c)&&(!sb||b.sub===sb)).map(b=>b.cod)):null;
   const lista=vist.filter(v=>(!codsCat||codsCat.has(v.cod))&&noPer(v.data));
   let h=cab('Relatório de Vistorias', [c||'todas as categorias',sb,perTxt()].filter(Boolean).join(' · '));
   h+=`<h2>1. Resumo</h2>`;
@@ -2731,7 +2773,7 @@ function relHistorico(id){
 function relEtiquetagem(){
   const c=document.getElementById('rCat').value, sb=document.getElementById('rSub').value,
         s=document.getElementById('rSt').value;
-  const f=porNivel(bens.filter(b=>(!c||b.cat===c)&&(!sb||(sb==='__sem'?!b.sub:b.sub===sb))&&(!s||b.status===s)))
+  const f=porNivel(bens.filter(b=>catOk(b,c)&&(!sb||(sb==='__sem'?!b.sub:b.sub===sb))&&(!s||b.status===s)))
               .slice().sort((a,b)=>(a.local||'').localeCompare(b.local||'','pt')||a.cod.localeCompare(b.cod,'pt',{numeric:true}));
   const d=new Date();
   let h=`<div class="rel etq"><h1>Relação para Etiquetagem de Patrimônio</h1>
@@ -2798,11 +2840,13 @@ function montaEixos(){
   document.getElementById('rCruzC').value='tipo';
 }
 function nivelTxt(){
-  return {princ:'só itens principais',sec:'só itens secundários',todos:'principais e secundários'}
+  if(soAvulsos())return 'só avulsos';
+  return {princ:'só itens principais',sec:'só avulsos',todos:'principais e avulsos'}
          [document.getElementById('rNivel').value];
 }
 /* que itens entram: principais, secundários ou os dois */
 function porNivel(lista){
+  if(soAvulsos())return lista.filter(ehAvulso);
   const n=document.getElementById('rNivel').value;
   if(n==='todos')return lista;
   const p=b=>(b.pos||'PRINCIPAL')==='PRINCIPAL';
@@ -2812,7 +2856,7 @@ function relCruzado(){
   const c=document.getElementById('rCat').value, sb=document.getElementById('rSub').value,
         st=document.getElementById('rSt').value;
   const base=porNivel(bens.filter(b=>
-    (!c||b.cat===c)&&(!sb||(sb==='__sem'?!b.sub:b.sub===sb))&&(!st||b.status===st)&&
+    catOk(b,c)&&(!sb||(sb==='__sem'?!b.sub:b.sub===sb))&&(!st||b.status===st)&&
     (st?true:(b.status!=='SUBSTITUÍDO'&&b.status!=='DESCARTADO'))));
   if(!base.length)return toast('Nenhum registro com esses filtros');
   const kL=document.getElementById('rCruzL').value, kC=document.getElementById('rCruzC').value;
@@ -2825,7 +2869,7 @@ function relCruzado(){
   const M={}; linhas.forEach(l=>{M[l]={};cols.forEach(k=>M[l][k]=0)});
   base.forEach(b=>{M[eL.v(b)][eC.v(b)]+=peso(b)});
   const fmt=n=>med==='valor'?n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):String(n);
-  const nivelRot={princ:'só itens principais',sec:'só itens secundários',todos:'principais e secundários'}
+  const nivelRot={princ:'só itens principais',sec:'só avulsos',todos:'principais e avulsos'}
                  [document.getElementById('rNivel').value];
   const medRot={itens:'quantidade de itens',un:'soma das unidades',valor:'soma dos valores de NF'}[med];
   let h=cab('Relatório Cruzado · '+eL.rot+' × '+eC.rot,
@@ -2859,11 +2903,57 @@ function relCruzado(){
 }
 
 /* ---------- conjuntos completos: o principal e tudo que está instalado nele ---------- */
+/* ---------- relatório de avulsos ----------
+   Todo item que não é o principal do seu código: TV BOX, fontes,
+   roteador, splitter e outros. Agrupado por categoria e por tipo. */
+function relAvulsos(){
+  const c=document.getElementById('rCat').value, sb=document.getElementById('rSub').value,
+        st=document.getElementById('rSt').value;
+  const vivo=b=>b.status!=='SUBSTITUÍDO'&&b.status!=='DESCARTADO';
+  const av=bens.filter(b=>(b.pos||'PRINCIPAL')!=='PRINCIPAL'
+                        &&catOk(b,c)&&(!sb||(sb==='__sem'?!b.sub:b.sub===sb))
+                        &&(st?b.status===st:vivo(b)))
+               .sort((x,y)=>(x.tipo||'').localeCompare(y.tipo||'','pt')||
+                            x.cod.localeCompare(y.cod,'pt',{numeric:true}));
+  if(!av.length)return toast('Nenhum avulso registrado com esses filtros');
+
+  let h=cab('Relatório de Avulsos',
+        [c||'todas as categorias',sb,st?'status '+st:''].filter(Boolean).join(' · '));
+
+  /* resumo por tipo */
+  const porTipo={};
+  av.forEach(x=>{const t=x.tipo||'OUTRO';porTipo[t]=(porTipo[t]||0)+(Number(x.qtd)||1)});
+  h+=`<table style="margin:0 0 14px"><thead><tr><th>Tipo</th><th class="nw">Unidades</th></tr></thead><tbody>`+
+     Object.keys(porTipo).sort((a,b)=>a.localeCompare(b,'pt'))
+       .map(t=>`<tr><td>${esc(t)}</td><td class="nw" style="text-align:right">${porTipo[t]}</td></tr>`).join('')+
+     `<tr><td><b>TOTAL</b></td><td class="nw" style="text-align:right"><b>`+
+     Object.values(porTipo).reduce((a,b)=>a+b,0)+`</b></td></tr></tbody></table>`;
+
+  /* item a item */
+  h+=`<table><thead><tr><th>Tipo</th><th>Marca / modelo</th><th class="nw">Série</th>`+
+     `<th class="nw">Patrimônio</th><th class="nw">Qtd</th><th>Instalado em<span class="m">localização</span></th>`+
+     `<th class="nw">Status</th><th>Observação</th></tr></thead><tbody>`+
+     av.map(x=>{
+       const pai=bens.find(b=>b.cod===x.cod&&(b.pos||'PRINCIPAL')==='PRINCIPAL');
+       return `<tr><td><b>${esc(x.tipo||'—')}</b></td>`+
+         `<td>${esc(x.marca||'')}${x.modelo?' '+esc(x.modelo):''}</td>`+
+         `<td class="nw">${esc(x.serie)||'—'}</td>`+
+         `<td class="nw">${esc(x.patrim)||'—'}</td>`+
+         `<td class="nw" style="text-align:right">${x.qtd||1}</td>`+
+         `<td>${esc(x.cod)}<span class="m">${esc((pai&&pai.local)||x.local||'')}</span></td>`+
+         `<td class="nw">${esc(x.status)}</td><td>${esc(x.obs)}</td></tr>`}).join('')+
+     `</tbody></table>`;
+
+  h+=`<div class="tot">${av.length} avulso(s) em `+
+     new Set(av.map(x=>x.cod)).size+` bem(ns)</div>`;
+  fecharRel(h);
+}
+
 function relConjuntos(){
   const c=document.getElementById('rCat').value, sb=document.getElementById('rSub').value,
         st=document.getElementById('rSt').value;
   const vivo=b=>b.status!=='SUBSTITUÍDO'&&b.status!=='DESCARTADO';
-  const base=bens.filter(b=>(!c||b.cat===c)&&(!sb||(sb==='__sem'?!b.sub:b.sub===sb))&&
+  const base=bens.filter(b=>catOk(b,c)&&(!sb||(sb==='__sem'?!b.sub:b.sub===sb))&&
                             (st?b.status===st:vivo(b)));
   if(!base.length)return toast('Nenhum registro com esses filtros');
   const codigos=[...new Set(base.map(b=>b.cod))]
@@ -2871,7 +2961,7 @@ function relConjuntos(){
   let h=cab('Relatório de Conjuntos',
         [c||'todas as categorias',sb,st?'status '+st:''].filter(Boolean).join(' · '));
   let totP=0,totS=0;
-  const cats=c?[c]:CATS;
+  const cats=catsDo(c,base);
   cats.forEach(k=>{
     const doCat=codigos.filter(cd=>base.some(b=>b.cod===cd&&b.cat===k));
     if(!doCat.length)return;
@@ -2922,7 +3012,7 @@ function relSubstituicoes(){
   const c=document.getElementById('rCat').value, sb=document.getElementById('rSub').value;
   /* o substituto carrega os dados da troca; o antecessor é quem saiu */
   let lista=porNivel(bens.filter(b=>b.substDe))
-    .filter(b=>(!c||b.cat===c)&&(!sb||(sb==='__sem'?!b.sub:b.sub===sb))&&noPer(b.substData))
+    .filter(b=>catOk(b,c)&&(!sb||(sb==='__sem'?!b.sub:b.sub===sb))&&noPer(b.substData))
     .sort((a,b)=>String(b.substData||'').localeCompare(String(a.substData||'')));
   if(!lista.length)return toast('Nenhuma substituição registrada nesse recorte');
   let h=cab('Relatório de Substituições',
@@ -2963,6 +3053,7 @@ function relSubstituicoes(){
 function gerarRelatorio(){
   if(document.getElementById('rModelo').value==='subst')return relSubstituicoes();
   if(document.getElementById('rModelo').value==='conj')return relConjuntos();
+  if(document.getElementById('rModelo').value==='avul')return relAvulsos();
   if(document.getElementById('rModelo').value==='cruz')return relCruzado();
   if(document.getElementById('rModelo').value==='etq')return relEtiquetagem();
   if(escopo==='ocorrencias')return relOcorrencias();
@@ -2972,8 +3063,8 @@ function gerarRelatorio(){
   const cf=document.getElementById('rFoto').checked,tam=document.getElementById('rFotoTam').value;
   const tc=document.getElementById('rTec').checked, fc=document.getElementById('rFicha').checked;
   const sb=document.getElementById('rSub').value;
-  const f=porNivel(bens.filter(b=>(!c||b.cat===c)&&(!sb||(sb==='__sem'?!b.sub:b.sub===sb))&&(!s||b.status===s)));
-  const cats=c?[c]:CATS;let sec=0;
+  const f=porNivel(bens.filter(b=>catOk(b,c)&&(!sb||(sb==='__sem'?!b.sub:b.sub===sb))&&(!s||b.status===s)));
+  const cats=catsDo(c,f);let sec=0;
   const d=new Date();
   const img=b=>{
     const dt=fotoDe(b);
@@ -3124,7 +3215,7 @@ document.getElementById('btRelJson').onclick=()=>{
   const sb=document.getElementById('rSub').value;
   const rec=[escopo==='ocorrencias'?('ocorrências '+(sitOc==='FECHADA'?'fechadas':'abertas')):escopo==='vistorias'?'vistorias':'bens',
     c,sb,s&&escopo==='bens'?s:'',perTxt()].filter(Boolean).join(' · ');
-  const codsCat=(c||sb)?new Set(bens.filter(b=>(!c||b.cat===c)&&(!sb||b.sub===sb)).map(b=>b.cod)):null;
+  const codsCat=(c||sb)?new Set(bens.filter(b=>catOk(b,c)&&(!sb||b.sub===sb)).map(b=>b.cod)):null;
   let lb=[],lo=[],lv=[];
   if(escopo==='ocorrencias'){
     lo=ocor.filter(o=>(sitOc==='FECHADA'?o.sit==='FECHADA':o.sit!=='FECHADA')&&(!codsCat||codsCat.has(o.cod))&&noPer(dataRef(o)));
@@ -3133,7 +3224,7 @@ document.getElementById('btRelJson').onclick=()=>{
     lv=vist.filter(v=>(!codsCat||codsCat.has(v.cod))&&noPer(v.data));
     const cods=new Set(lv.map(v=>v.cod));lb=bens.filter(b=>cods.has(b.cod));
   }else{
-    lb=bens.filter(b=>(!c||b.cat===c)&&(!sb||b.sub===sb)&&(!s||b.status===s));
+    lb=bens.filter(b=>catOk(b,c)&&(!sb||b.sub===sb)&&(!s||b.status===s));
     const cods=new Set(lb.map(b=>b.cod));
     lo=ocor.filter(o=>cods.has(o.cod)&&noPer(dataRef(o)));
     lv=vist.filter(v=>cods.has(v.cod)&&noPer(v.data));
