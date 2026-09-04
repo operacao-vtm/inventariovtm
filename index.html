@@ -294,6 +294,7 @@ header{position:relative;padding-bottom:26px}
       <button class="btn sm" id="btGerarApp" title="Gera um novo arquivo do sistema com todos os dados e fotos dentro">Gerar sistema completo</button>
       <button class="btn gh sm" id="btBkp" title="Cópias automáticas guardadas neste aparelho">Backups</button>
       <button class="btn gh sm" id="btNuvem" title="Enviar e trazer da planilha da VTM">Nuvem</button>
+      <span id="nvSelo" class="mut" style="font-size:10.5px;align-self:center"></span>
       <input type="file" id="fileIn" accept=".json" style="display:none">
     </div>
   </div>
@@ -733,6 +734,14 @@ header{position:relative;padding-bottom:26px}
     <button class="btn" id="nvEnviar">Enviar para a planilha</button>
     <button class="btn gh" id="nvTrazer">Trazer da planilha</button>
   </div>
+  <label style="margin-top:12px;display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:12.5px;color:var(--txt)">
+    <input type="checkbox" id="nvAuto" style="width:auto;margin:0;accent-color:var(--acc)">
+    Enviar automaticamente a cada alteração
+  </label>
+  <div class="mut" style="font-size:11px;margin-top:2px">
+    Grava no aparelho na hora e manda para a planilha meio minuto depois. Sem sinal, fica
+    pendente e sobe sozinho quando a conexão voltar.
+  </div>
   <div id="nvEstado" class="mut" style="margin-top:12px;font-size:12px;line-height:1.5"></div>
   <div class="bar" style="margin-top:14px;align-items:center">
     <span class="mut" style="font-size:11px">O endereço e a senha ficam guardados neste aparelho.</span>
@@ -1050,6 +1059,7 @@ function auto(marcar,comFotos){
              toast('Espaço do navegador cheio — as fotos foram para a cópia interna. Salve a base em arquivo.')}
   }
   if(cofreOk)cofreGravar();
+  if(marcar!==false)agendaEnvio();
   estado();
 }
 function peso(){return Math.round((JSON.stringify(fotos).length+JSON.stringify(fotosNF).length)/1024)}
@@ -1156,7 +1166,8 @@ function nvSalvarCfg(){
   DB.set('vtm_nuvem',JSON.stringify({
     url:document.getElementById('nvUrl').value.trim(),
     senha:document.getElementById('nvSenha').value,
-    quem:document.getElementById('nvQuem').value.trim()
+    quem:document.getElementById('nvQuem').value.trim(),
+    auto:document.getElementById('nvAuto').checked
   }));
 }
 function nvDiz(txt,cor){
@@ -1168,6 +1179,7 @@ function abrirNuvem(){
   document.getElementById('nvUrl').value=c.url||'';
   document.getElementById('nvSenha').value=c.senha||'';
   document.getElementById('nvQuem').value=c.quem||'';
+  document.getElementById('nvAuto').checked=!!c.auto;
   nvDiz(c.ultimo?('Última troca com a planilha: '+c.ultimo):'Ainda não houve troca com a planilha.');
   document.getElementById('mdNuvem').classList.add('on');
 }
@@ -1199,14 +1211,38 @@ document.getElementById('nvTestar').onclick=async()=>{
   }catch(e){ nvDiz('Não foi possível: '+e.message,'var(--warn)') }
 };
 
-document.getElementById('nvEnviar').onclick=async()=>{
-  nvSalvarCfg();
-  if(!await confirmar('Enviar '+bens.length+' bens para a planilha da VTM?\n\n'+
-     'O conteúdo das abas BENS, OCORRENCIAS e VISTORIAS será substituído pelo que está '+
-     'neste aparelho. Se outra pessoa gravou algo depois da sua última troca, '+
-     'traga da planilha primeiro.','ENVIAR PARA A PLANILHA','Enviar'))return;
+/* ---------- envio ----------
+   Um caminho só, usado pelo botão e pelo envio automático.
+   Calado quando é automático: não interrompe quem está registrando. */
+let nvTimer=null, nvPend=false, nvOcupado=false, nvRetry=null;
+
+function nvSelo(txt,cor){
+  const e=document.getElementById('nvSelo');
+  if(!e)return;
+  e.textContent=txt||''; e.style.color=cor||'';
+}
+function nvPendente(v){
+  nvPend=v;
+  if(v)nvSelo('nuvem: pendente','var(--warn)');
+  if(v&&!nvRetry)nvRetry=setInterval(()=>{ if(nvPend)nvEnviarAgora(true) },120000);
+  if(!v&&nvRetry){clearInterval(nvRetry);nvRetry=null}
+}
+/* chamada a cada gravação: espera 30 s para não subir a cada tecla */
+function agendaEnvio(){
+  const c=nvCfg();
+  if(!c.auto||!c.url)return;
+  nvPendente(true);
+  clearTimeout(nvTimer);
+  nvTimer=setTimeout(()=>nvEnviarAgora(true),30000);
+}
+
+async function nvEnviarAgora(silencioso){
+  if(nvOcupado)return;
+  nvOcupado=true;
+  const diz=(t,c)=>{ if(!silencioso)nvDiz(t,c) };
   try{
-    nvDiz('Enviando os dados...');
+    if(silencioso)nvSelo('nuvem: enviando...','var(--acc)');
+    diz('Enviando os dados...');
     const d=await nvChamar({acao:'gravar',bens:bens,ocor:ocor,vist:vist});
     /* as fotografias vão depois, uma por vez, e só as que ainda não subiram */
     const pend=[];
@@ -1224,16 +1260,46 @@ document.getElementById('nvEnviar').onclick=async()=>{
         subiu++;
       }catch(e){ falhou++ }
     }
-    if(subiu)auto(true,false);
+    if(subiu){DB.set('vtm_sessao',JSON.stringify({bens,ocor,vist,nome:nomeBase,dirty}))}
     dirty=false; estado();
     const q=nvRegistrar();
-    nvDiz('Enviado em '+q+'.<br><b>'+d.bens+' bens</b> na planilha'+
-          (subiu?', '+subiu+' fotografia(s) na pasta do Drive':'')+
-          (falhou?'. '+falhou+' fotografia(s) não subiram — tente novamente.':'.'),'var(--ok)');
-    toast('Planilha atualizada');
-  }catch(e){ nvDiz('Não foi possível enviar: '+e.message+
-      '<br><span class="mut">Nada foi perdido: os dados seguem neste aparelho.</span>','var(--warn)') }
+    nvPendente(false);
+    nvSelo('nuvem: enviado '+q.slice(-5),'var(--ok)');
+    diz('Enviado em '+q+'.<br><b>'+d.bens+' bens</b> na planilha'+
+        (subiu?', '+subiu+' fotografia(s) na pasta do Drive':'')+
+        (falhou?'. '+falhou+' fotografia(s) não subiram — tente novamente.':'.'),'var(--ok)');
+    if(!silencioso)toast('Planilha atualizada');
+  }catch(e){
+    nvPendente(true);
+    diz('Não foi possível enviar: '+e.message+
+        '<br><span class="mut">Nada foi perdido: os dados seguem neste aparelho.</span>','var(--warn)');
+  }finally{ nvOcupado=false }
+}
+
+document.getElementById('nvEnviar').onclick=async()=>{
+  nvSalvarCfg();
+  if(!await confirmar('Enviar '+bens.length+' bens para a planilha da VTM?\n\n'+
+     'O conteúdo das abas BENS, OCORRENCIAS e VISTORIAS será substituído pelo que está '+
+     'neste aparelho. Se outra pessoa gravou algo depois da sua última troca, '+
+     'traga da planilha primeiro.','ENVIAR PARA A PLANILHA','Enviar'))return;
+  clearTimeout(nvTimer);
+  nvEnviarAgora(false);
 };
+
+/* ligar a chave já vale para a próxima alteração; desligar cancela o que estava agendado */
+document.getElementById('nvAuto').addEventListener('change',()=>{
+  nvSalvarCfg();
+  if(document.getElementById('nvAuto').checked){
+    nvDiz('Envio automático ligado. A cada alteração o sistema manda para a planilha.','var(--ok)');
+    if(dirty)agendaEnvio();
+  }else{
+    clearTimeout(nvTimer); nvPendente(false); nvSelo('');
+    nvDiz('Envio automático desligado. Use o botão Enviar quando quiser.');
+  }
+});
+
+/* a conexão voltou: sobe o que ficou pendente */
+window.addEventListener('online',()=>{ if(nvPend)nvEnviarAgora(true) });
 
 document.getElementById('nvTrazer').onclick=async()=>{
   nvSalvarCfg();
