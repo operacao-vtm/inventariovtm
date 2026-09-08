@@ -1244,37 +1244,65 @@ async function nvEnviarAgora(silencioso){
     if(silencioso)nvSelo('nuvem: enviando...','var(--acc)');
     diz('Enviando os dados...');
     const d=await nvChamar({acao:'gravar',bens:bens,ocor:ocor,vist:vist});
-    /* as fotografias vão depois, uma por vez, e só as que ainda não subiram */
-    const pend=[];
-    bens.forEach(b=>{
-      if(fotos[b.id]&&!b.fotoDrive)   pend.push({b:b,tipo:'eqp',dados:fotos[b.id]});
-      if(fotosNF[b.id]&&!b.fotoNfDrive)pend.push({b:b,tipo:'nf', dados:fotosNF[b.id]});
-    });
-    let subiu=0, falhou=0;
-    for(let i=0;i<pend.length;i++){
-      const x=pend[i];
-      nvDiz('Dados enviados. Enviando fotografia '+(i+1)+' de '+pend.length+'...');
-      try{
-        const r=await nvChamar({acao:'foto',id:x.b.id,cod:x.b.cod,tipo:x.tipo,dados:x.dados});
-        if(x.tipo==='nf')x.b.fotoNfDrive=r.link; else x.b.fotoDrive=r.link;
-        subiu++;
-      }catch(e){ falhou++ }
-    }
-    if(subiu){DB.set('vtm_sessao',JSON.stringify({bens,ocor,vist,nome:nomeBase,dirty}))}
+    /* o dado já está na planilha: confirma agora, sem esperar fotografia */
     dirty=false; estado();
     const q=nvRegistrar();
     nvPendente(false);
     nvSelo('nuvem: enviado '+q.slice(-5),'var(--ok)');
-    diz('Enviado em '+q+'.<br><b>'+d.bens+' bens</b> na planilha'+
-        (subiu?', '+subiu+' fotografia(s) na pasta do Drive':'')+
-        (falhou?'. '+falhou+' fotografia(s) não subiram — tente novamente.':'.'),'var(--ok)');
+    diz('Enviado em '+q+'. <b>'+d.bens+' bens</b> na planilha.','var(--ok)');
     if(!silencioso)toast('Planilha atualizada');
+    filaFotos();   /* as fotografias seguem por conta própria */
   }catch(e){
     nvPendente(true);
     diz('Não foi possível enviar: '+e.message+
         '<br><span class="mut">Nada foi perdido: os dados seguem neste aparelho.</span>','var(--warn)');
   }finally{ nvOcupado=false }
 }
+
+/* ---------- fila de fotografias ----------
+   Uma por vez, em segundo plano, sem travar quem está registrando.
+   Cada foto que sobe fica marcada no registro e nunca sobe duas vezes. */
+let fotoFila=false;
+function pendFotos(){
+  const l=[];
+  bens.forEach(b=>{
+    if(fotos[b.id]&&!b.fotoDrive)    l.push({b:b,tipo:'eqp',dados:fotos[b.id]});
+    if(fotosNF[b.id]&&!b.fotoNfDrive)l.push({b:b,tipo:'nf', dados:fotosNF[b.id]});
+  });
+  return l;
+}
+async function filaFotos(){
+  if(fotoFila)return;
+  const c=nvCfg(); if(!c.url)return;
+  fotoFila=true;
+  try{
+    let n=0;
+    for(;;){
+      const l=pendFotos();
+      if(!l.length)break;
+      const x=l[0], resta=l.length;
+      nvSelo('nuvem: '+resta+' foto(s) subindo','var(--acc)');
+      try{
+        const r=await nvChamar({acao:'foto',id:x.b.id,cod:x.b.cod,tipo:x.tipo,dados:x.dados});
+        if(x.tipo==='nf')x.b.fotoNfDrive=r.link; else x.b.fotoDrive=r.link;
+        DB.set('vtm_sessao',JSON.stringify({bens,ocor,vist,nome:nomeBase,dirty}));
+        n++;
+      }catch(e){
+        nvSelo('nuvem: '+resta+' foto(s) pendente(s)','var(--warn)');
+        break;   /* sem sinal: para aqui e retoma no próximo envio */
+      }
+      await new Promise(r=>setTimeout(r,300));
+    }
+    if(!pendFotos().length&&n)nvSelo('nuvem: fotos enviadas','var(--ok)');
+  }finally{ fotoFila=false }
+}
+/* clicar no selo manda agora, sem esperar os segundos */
+document.getElementById('nvSelo').style.cursor='pointer';
+document.getElementById('nvSelo').title='Enviar agora para a planilha';
+document.getElementById('nvSelo').onclick=()=>{
+  if(!nvCfg().url)return abrirNuvem();
+  clearTimeout(nvTimer); nvEnviarAgora(true); filaFotos();
+};
 
 document.getElementById('nvEnviar').onclick=async()=>{
   nvSalvarCfg();
