@@ -734,13 +734,12 @@ header{position:relative;padding-bottom:26px}
     <button class="btn" id="nvEnviar">Enviar para a planilha</button>
     <button class="btn gh" id="nvTrazer">Trazer da planilha</button>
   </div>
-  <label style="margin-top:12px;display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:12.5px;color:var(--txt)">
-    <input type="checkbox" id="nvAuto" style="width:auto;margin:0;accent-color:var(--acc)">
-    Enviar automaticamente a cada alteração
-  </label>
-  <div class="mut" style="font-size:11px;margin-top:2px">
-    Grava no aparelho na hora e manda para a planilha meio minuto depois. Sem sinal, fica
-    pendente e sobe sozinho quando a conexão voltar.
+  <div id="nvAtivo" style="margin-top:12px;border:1px solid var(--line);border-left:3px solid var(--ok);
+       border-radius:6px;padding:9px 10px;font-size:12px;line-height:1.5">
+    <b style="color:var(--ok)">SINCRONIZAÇÃO ATIVA</b><br>
+    <span class="mut">Toda alteração vai para a planilha sozinha, poucos segundos depois de salvar,
+    e o sistema traz o que os outros aparelhos gravaram. Sem sinal, fica pendente e sobe quando a
+    conexão voltar. Não há nada para ligar.</span>
   </div>
   <div id="nvEstado" class="mut" style="margin-top:12px;font-size:12px;line-height:1.5"></div>
   <div class="bar" style="margin-top:14px;align-items:center">
@@ -828,6 +827,10 @@ const FOTOS_BASE={"T1-TELA 1":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAA
 <!-- fotografias de nota fiscal embutidas pelo Gerar sistema completo -->
 <script>
 const FOTOS_NF_BASE={};
+</script>
+<!-- endereço e senha da planilha, gravados pelo Gerar sistema completo -->
+<script>
+const NUVEM_BASE={};
 </script>
 <script>
 const STATUS=["ATIVO","AVULSO","MANUTENÇÃO","INOPERANTE","NÃO LOCALIZADO","RETIRADO","SUBSTITUÍDO"];
@@ -1160,14 +1163,21 @@ document.getElementById('btFechar').onclick=async()=>{
    envio acontece quando a pessoa decide. As fotografias vão uma a uma
    para a pasta do Drive; a planilha guarda apenas o endereço de cada uma. */
 function nvCfg(){
-  try{ return JSON.parse(DB.get('vtm_nuvem')||'{}') }catch(e){ return {} }
+  const base=(typeof NUVEM_BASE!=='undefined')?NUVEM_BASE:{};
+  let c={}; try{ c=JSON.parse(DB.get('vtm_nuvem')||'{}') }catch(e){}
+  /* o que veio no arquivo vale para qualquer aparelho que abrir;
+     o que a pessoa digitar neste aparelho tem preferência */
+  const url=c.url||base.url||'';
+  /* arquivo distribuído já com endereço: sincroniza sem ninguém configurar nada */
+  return {url:url, senha:c.senha||base.senha||'',
+          quem:c.quem||'', auto:(c.auto!==undefined?c.auto:(base.auto!==undefined?!!base.auto:!!url)),
+          ultimo:c.ultimo||''};
 }
 function nvSalvarCfg(){
   DB.set('vtm_nuvem',JSON.stringify({
     url:document.getElementById('nvUrl').value.trim(),
     senha:document.getElementById('nvSenha').value,
-    quem:document.getElementById('nvQuem').value.trim(),
-    auto:document.getElementById('nvAuto').checked
+    quem:document.getElementById('nvQuem').value.trim()
   }));
 }
 function nvDiz(txt,cor){
@@ -1179,7 +1189,7 @@ function abrirNuvem(){
   document.getElementById('nvUrl').value=c.url||'';
   document.getElementById('nvSenha').value=c.senha||'';
   document.getElementById('nvQuem').value=c.quem||'';
-  document.getElementById('nvAuto').checked=!!c.auto;
+  document.getElementById('nvAtivo').style.display=c.url?'':'none';
   nvDiz(c.ultimo?('Última troca com a planilha: '+c.ultimo):'Ainda não houve troca com a planilha.');
   document.getElementById('mdNuvem').classList.add('on');
 }
@@ -1215,6 +1225,16 @@ document.getElementById('nvTestar').onclick=async()=>{
    Um caminho só, usado pelo botão e pelo envio automático.
    Calado quando é automático: não interrompe quem está registrando. */
 let nvTimer=null, nvPend=false, nvOcupado=false, nvRetry=null;
+/* Abrir o arquivo não é alterar: enquanto a pessoa não mexer em nada, este
+   aparelho não manda nada — senão a cópia de quem abre depois sobrescreve
+   o que o outro acabou de gravar. */
+let nvPronto=false;
+/* ---------- o que mudou neste aparelho ----------
+   A sincronização manda registro por registro, não a base inteira.
+   Assim dois aparelhos podem gravar bens diferentes sem um apagar o outro. */
+let sujos=new Set(), apagados=new Set();
+function marcaSujo(id){ if(id){ sujos.add(Number(id)); apagados.delete(Number(id)); } }
+function marcaApagado(id){ if(id){ apagados.add(Number(id)); sujos.delete(Number(id)); } }
 
 function nvSelo(txt,cor){
   const e=document.getElementById('nvSelo');
@@ -1230,10 +1250,10 @@ function nvPendente(v){
 /* chamada a cada gravação: espera 30 s para não subir a cada tecla */
 function agendaEnvio(){
   const c=nvCfg();
-  if(!c.auto||!c.url)return;
+  if(!nvPronto||!c.auto||!c.url)return;
   nvPendente(true);
   clearTimeout(nvTimer);
-  nvTimer=setTimeout(()=>nvEnviarAgora(true),30000);
+  nvTimer=setTimeout(()=>nvEnviarAgora(true),5000);
 }
 
 async function nvEnviarAgora(silencioso){
@@ -1243,7 +1263,15 @@ async function nvEnviarAgora(silencioso){
   try{
     if(silencioso)nvSelo('nuvem: enviando...','var(--acc)');
     diz('Enviando os dados...');
-    const d=await nvChamar({acao:'gravar',bens:bens,ocor:ocor,vist:vist});
+    /* só o que mudou aqui; a base inteira apenas quando é a primeira carga */
+    /* parcial a partir da segunda troca com a planilha; a primeira leva tudo */
+    const parcial = !!nvCfg().ultimo && (sujos.size||apagados.size);
+    const lista = parcial ? bens.filter(b=>sujos.has(Number(b.id))) : bens;
+    const fora  = parcial ? [...apagados] : [];
+    const d = parcial
+      ? await nvChamar({acao:'juntar',bens:lista,apagar:fora,ocor:ocor,vist:vist})
+      : await nvChamar({acao:'gravar',bens:bens,ocor:ocor,vist:vist});
+    sujos.clear(); apagados.clear();
     /* o dado já está na planilha: confirma agora, sem esperar fotografia */
     dirty=false; estado();
     const q=nvRegistrar();
@@ -1314,20 +1342,43 @@ document.getElementById('nvEnviar').onclick=async()=>{
   nvEnviarAgora(false);
 };
 
-/* ligar a chave já vale para a próxima alteração; desligar cancela o que estava agendado */
-document.getElementById('nvAuto').addEventListener('change',()=>{
-  nvSalvarCfg();
-  if(document.getElementById('nvAuto').checked){
-    nvDiz('Envio automático ligado. A cada alteração o sistema manda para a planilha.','var(--ok)');
-    if(dirty)agendaEnvio();
-  }else{
-    clearTimeout(nvTimer); nvPendente(false); nvSelo('');
-    nvDiz('Envio automático desligado. Use o botão Enviar quando quiser.');
-  }
-});
-
 /* a conexão voltou: sobe o que ficou pendente */
 window.addEventListener('online',()=>{ if(nvPend)nvEnviarAgora(true) });
+
+/* ---------- busca automática ----------
+   De meio em meio minuto o aparelho pergunta à planilha se mudou algo.
+   Só troca a tela quando não há nada pendente aqui — assim o que você
+   acabou de registrar nunca é apagado pelo que veio de fora. */
+let nvAssin='';
+async function nvBuscar(){
+  const c=nvCfg();
+  if(!c.auto||!c.url||nvOcupado)return;
+  if(nvPend&&!sujos.size&&!apagados.size)return;   /* pendente sem saber o quê: não arrisca */
+  if(document.querySelector('.modal.on'))return;   /* ficha aberta: não mexe */
+  try{
+    const d=await nvChamar({acao:'ler'});
+    if(!d.bens||!d.bens.length)return;
+    nvRegistrar();   /* houve troca com a planilha: daqui em diante manda só o que muda */
+    const assin=d.bens.length+':'+JSON.stringify(d.bens).length;
+    if(assin===nvAssin)return;                    /* nada mudou */
+    const primeira=!nvAssin;
+    nvAssin=assin;
+    /* junta: o que veio da planilha entra, o que ainda não subiu daqui fica */
+    const vindos=d.bens.map(b=>{ b.id=Number(b.id)||b.id; return b });
+    const meus=bens.filter(b=>sujos.has(Number(b.id)));
+    const fora=new Set(apagados);
+    const mapa=new Map();
+    vindos.forEach(b=>{ if(!fora.has(Number(b.id)))mapa.set(Number(b.id),b) });
+    meus.forEach(b=>mapa.set(Number(b.id),b));
+    bens=[...mapa.values()];
+    if(!sujos.size&&!apagados.size){ ocor=d.ocor||[]; vist=d.vist||[] }
+    DB.set('vtm_sessao',JSON.stringify({bens,ocor,vist,nome:nomeBase,dirty}));
+    tudo(); estado();
+    nvSelo('nuvem: atualizado '+new Date().toLocaleTimeString('pt-BR').slice(0,5),'var(--ok)');
+    if(!primeira)toast('Dados atualizados a partir da planilha');
+  }catch(e){}
+}
+setInterval(nvBuscar,15000);
 
 document.getElementById('nvTrazer').onclick=async()=>{
   nvSalvarCfg();
@@ -1891,8 +1942,9 @@ document.getElementById('secSalv').onclick=()=>{
       ant.saidaData  = novo.substData;
       ant.saidaPor   = novo.id;
       msg='Substituição registrada em '+br(novo.substData);
+      marcaSujo(ant.id);
     } else msg='Item incluído em '+secConj.cod;
-    bens.push(novo);
+    bens.push(novo); marcaSujo(novo.id);
     expandidos.add(secConj.cod);
   }
   auto(true,false);
@@ -1905,7 +1957,7 @@ document.getElementById('secSalv').onclick=()=>{
 document.getElementById('secDel').onclick=async()=>{
   const b=bens.find(x=>x.id===secId); if(!b)return;
   if(!await confirmar('O item '+(b.desc||b.tipo)+' será removido do conjunto '+b.cod+'.','EXCLUIR ITEM','Excluir'))return;
-  bens=bens.filter(x=>x.id!==secId);
+  bens=bens.filter(x=>x.id!==secId); marcaApagado(secId);
   auto(true,false);
   document.getElementById('mdSec').classList.remove('on');
   const volta=bens.find(x=>x.cod===secConj.cod&&(x.pos||'PRINCIPAL')==='PRINCIPAL');
@@ -2223,7 +2275,7 @@ async function desfazerSubst(id){
       'DESFAZER SUBSTITUIÇÃO','Desfazer'))return;
   ant.status=ant.statusAnt||'ATIVO';
   delete ant.statusAnt; delete ant.saidaData; delete ant.saidaPor;
-  bens=bens.filter(x=>x.id!==id);
+  bens=bens.filter(x=>x.id!==id); marcaApagado(id); marcaSujo(ant.id);
   const tinha=!!fotos[id]; delete fotos[id];
   auto(true,tinha);
   document.getElementById('mdBem').classList.remove('on');
@@ -2435,6 +2487,8 @@ document.getElementById('mSalv').onclick=async()=>{
     }
     substId=0;
   }
+  marcaSujo(alvo.id);
+  if(alvo.substDe)marcaSujo(alvo.substDe);   /* o que saiu também mudou */
   const mudouFoto = fotoTmp!==undefined, mudouNf = fotoNfTmp!==undefined;
   if(mudouFoto){ if(fotoTmp){fotos[alvo.id]=fotoTmp; delete alvo.semFoto;} else {delete fotos[alvo.id]; alvo.semFoto=true;} }
   if(mudouNf){ if(fotoNfTmp){fotosNF[alvo.id]=fotoNfTmp; delete alvo.semFotoNf;} else {delete fotosNF[alvo.id]; alvo.semFotoNf=true;} }
@@ -2450,7 +2504,8 @@ document.getElementById('mDel').onclick=async()=>{
     (ant?`\n\nComo ele entrou por substituição, ${ant.desc||ant.cod} voltará a operar na posição ${ant.pos||'PRINCIPAL'}.`:'');
   if(!await confirmar(aviso,'EXCLUIR BEM','Excluir'))return;
   if(ant){ant.status=ant.statusAnt||'ATIVO';delete ant.statusAnt;delete ant.saidaData;delete ant.saidaPor;}
-  bens=bens.filter(x=>x.id!==editId);const tinha=!!fotos[editId];delete fotos[editId];
+  bens=bens.filter(x=>x.id!==editId); marcaApagado(editId); if(ant)marcaSujo(ant.id);
+  const tinha=!!fotos[editId];delete fotos[editId];
   auto(true,tinha);document.getElementById('mdBem').classList.remove('on');tudo();toast('Bem excluído');
 };
 
@@ -3241,13 +3296,12 @@ function gerarRelatorio(){
     cats.forEach(k=>{const g=f.filter(b=>b.cat===k);if(!g.length)return;
       h+=`<div class="grupo">${esc(k)} — ${un(g)} unidade(s) em ${g.length} registro(s)</div>`;
       if(fc){ h+='<div class="cols2">'+g.map(fichaHTML).join('')+'</div>'; return }
-      const ss=[...new Set(g.map(b=>b.sub).filter(Boolean))].sort();
-      if(ss.length&&ss.length*1<=g.length&&ss.length>0&&!sb&&ss.length>1){
-        ss.forEach(x=>{const gs=g.filter(b=>b.sub===x);
-          h+=`<div class="grupo" style="font-weight:600;font-size:11px">${esc(x)} — ${un(gs)}</div>`+tab(gs)});
-        const sem=g.filter(b=>!b.sub);
-        if(sem.length)h+=tab(sem);
-      } else h+=tab(g);
+      /* ordem numérica pelo código, corrida: sem quebra por subcategoria.
+         Conferir 195 monitores exige seguir a numeração, não a garagem. */
+      h+=tab([...g].sort((x,y)=>
+        x.cod.localeCompare(y.cod,'pt',{numeric:true,sensitivity:'base'})||
+        ((x.pos||'PRINCIPAL')==='PRINCIPAL'?0:1)-((y.pos||'PRINCIPAL')==='PRINCIPAL'?0:1)
+      ));
     });
   }
   const vistP=vist.filter(v=>noPer(v.data));
@@ -3410,6 +3464,10 @@ document.getElementById('btGerarApp').onclick=async()=>{
     const t=s.textContent;
     if(/^\s*const FOTOS_BASE=/.test(t)) s.textContent='const FOTOS_BASE='+JSON.stringify(fts)+';';
     else if(/^\s*const FOTOS_NF_BASE=/.test(t)) s.textContent='const FOTOS_NF_BASE='+JSON.stringify(ftsNF)+';';
+    else if(/^\s*const NUVEM_BASE=/.test(t)){
+      const c=nvCfg();
+      s.textContent='const NUVEM_BASE='+JSON.stringify({url:c.url||'',senha:c.senha||''})+';';
+    }
     else if(/const BASE = \[/.test(t))
       s.textContent=t.replace(/const BASE = \[[\s\S]*?\];/, 'const BASE = '+JSON.stringify(bens)+';');
   });
@@ -3695,6 +3753,14 @@ function acaoLista(ctx,a){
 /* ---------- boot ---------- */
 function tudo(){locais();painel();tabelaBens();tabelaOc();tabelaVist()}
 carregar();selects();estado();checaFotos();tudo();
+/* ao abrir: busca o que houver na planilha antes de liberar o envio */
+(async()=>{
+  const c=nvCfg();
+  /* dirty na abertura é só a migração de fábrica; o que conta é não haver
+     alteração de pessoa pendente neste aparelho */
+  if(c.auto&&c.url&&!sujos.size&&!apagados.size){ nvAssin=''; await nvBuscar(); }
+  nvPronto=true;
+})();
 if(avisoFabrica)setTimeout(()=>toast(avisoFabrica+' registro(s) atualizados com os dados do arquivo'),700);
 </script>
 </body>
