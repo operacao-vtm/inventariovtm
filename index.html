@@ -383,7 +383,7 @@ td.celAcess{color:#f0c419;font-weight:600}
   <div class="hrow">
     <div class="marca">
       <span class="logo-vtm" role="img" aria-label="VTM Mídia"></span>
-      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 22.7</b> · 25/09/2026 · <b style="color:var(--acc)">build 25/09 18:52</b></small></h1>
+      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 22.8</b> · 25/09/2026 · <b style="color:var(--acc)">build 25/09 18:56</b></small></h1>
     </div>
     <div class="file">
       <span id="semFotos" style="display:none;background:rgba(232,161,58,.15);border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 10px;font-size:12px;margin-left:auto" title="Baixe o arquivo fotos.js e deixe na mesma pasta do index.html">⚠ fotos.js não encontrado — as 153 fotos do relatório não serão exibidas</span>
@@ -5303,7 +5303,7 @@ if(avisoFabrica)setTimeout(()=>toast(avisoFabrica+' registro(s) atualizados com 
   document.addEventListener('keydown',e=>{ if(e.key==='Escape')abre(false); });
   mn.addEventListener('click',e=>{ if(e.target.closest('button'))setTimeout(()=>abre(false),0); });
   const est=document.getElementById('fEstado');
-  const marca=()=>{ dot.hidden=!est||/^\s*salvo\s*$/i.test(est.textContent); };
+  const marca=()=>{ dot.hidden=!est||!/não salvas/i.test(est.textContent); };
   if(est){ new MutationObserver(marca).observe(est,{childList:true,characterData:true,subtree:true}); marca(); }
 })();
 </script>
