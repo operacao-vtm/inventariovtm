@@ -409,7 +409,7 @@ td.celAcess{color:#f0c419;font-weight:600}
   <div class="hrow">
     <div class="marca">
       <span class="logo-vtm" role="img" aria-label="VTM Mídia"></span>
-      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 26.5</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 15:31</b></small></h1>
+      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 26.7</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 15:48</b></small></h1>
     </div>
     <div class="file">
       <span id="semFotos" style="display:none;background:rgba(232,161,58,.15);border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 10px;font-size:12px;margin-left:auto" title="Baixe o arquivo fotos.js e deixe na mesma pasta do index.html">⚠ fotos.js não encontrado — as 153 fotos do relatório não serão exibidas</span>
@@ -3571,11 +3571,11 @@ function nfHTML(b){
 
 /* composição do valor do bem: equipamento, acessórios e demais itens, com o total */
 function compHTML(b){
-  if(!b||!(Array.isArray(b.comp)&&b.comp.length))return '';
+  if(!b||!(Array.isArray(b.comp)&&b.comp.length)&&!num(b.valor))return '';
   const bd='border:1px solid #bbb;padding:2px 8px';
   const lin=[[b.desc||'Equipamento',1,num(b.valor)]]
     .concat((b.acess||[]).map(x=>[x.item,Number(x.qtd)||1,num(x.valor)]))
-    .concat(b.comp.map(x=>[x.item,Number(x.qtd)||1,num(x.valor)]));
+    .concat((b.comp||[]).map(x=>[x.item,Number(x.qtd)||1,num(x.valor)]));
   return '<table style="border-collapse:collapse;margin:4px 0 0;font-size:10.5px">'+
     `<tr><th colspan="4" style="${bd};background:#e8f3f1;text-align:left;font-weight:700">Composição do valor</th></tr>`+
     `<tr><th style="${bd};background:#f0f0f0;text-align:left">Item</th><th style="${bd};background:#f0f0f0">Qtd</th><th style="${bd};background:#f0f0f0;text-align:right">Unit. (R$)</th><th style="${bd};background:#f0f0f0;text-align:right">Total (R$)</th></tr>`+
@@ -4207,6 +4207,7 @@ function ordAcervo(x,y){
   const cx=CATS.indexOf(x.cat)<0?99:CATS.indexOf(x.cat);
   const cy=CATS.indexOf(y.cat)<0?99:CATS.indexOf(y.cat);
   if(cx!==cy)return cx-cy;
+  if(primeiro(x)!==primeiro(y))return primeiro(x)-primeiro(y);
   const bx=base(x.cod), by=base(y.cod);
   if(bx!==by)return bx.localeCompare(by,'pt');
   const dx=/(\d+)\s*$/.exec(x.cod), dy=/(\d+)\s*$/.exec(y.cod);
@@ -4217,8 +4218,10 @@ function ordAcervo(x,y){
   if(px!==py)return px.localeCompare(py,'pt');
   return (+dx[1])-(+dy[1]);
 }
+/* o reboque abre a lista dos PLMs */
+const primeiro=b=>(String(b.tipo||'').toUpperCase()==='REBOQUE'||/^REBOQUE/i.test(String(b.cod||'')))?0:1;
 function ordCod(a,b){
-  return a.cod.localeCompare(b.cod,'pt',{numeric:true,sensitivity:'base'});
+  return (primeiro(a)-primeiro(b))||a.cod.localeCompare(b.cod,'pt',{numeric:true,sensitivity:'base'});
 }
 /* ordem hierárquica do relatório: categoria (ordem do painel) →
    subcategoria (T1, T2… pela ordem dos códigos) → código do bem */
@@ -6208,17 +6211,19 @@ if(avisoFabrica)setTimeout(()=>toast(avisoFabrica+' registro(s) atualizados com 
   const bx=document.getElementById('mCompBox');
   function desenha(){
     const b=editId?bens.find(x=>x.id===editId):null;
-    if(!b||!(Array.isArray(b.comp)&&b.comp.length)){ bx.style.display='none'; bx.innerHTML=''; return; }
     const eq=num(document.getElementById('mValor').value);
+    const temComp=b&&Array.isArray(b.comp)&&b.comp.length;
+    /* o quadro aparece sempre que o bem tem algum valor, mesmo sem nota fiscal */
+    if(!b||!(temComp||eq||(acessAtual||[]).length)){ bx.style.display='none'; bx.innerHTML=''; return; }
     const ac=(acessAtual||[]).reduce((a,x)=>a+num(x.valor)*(Number(x.qtd)||1),0);
-    const cp=valComp(b);
+    const cp=temComp?valComp(b):0;
     const td='border:1px solid var(--line);padding:4px 8px';
     bx.style.display='';
     bx.innerHTML='<span class="tit" style="display:block;margin-bottom:6px">COMPOSIÇÃO DO VALOR</span>'+
       '<table style="border-collapse:collapse;width:100%;font-size:12.5px">'+
       `<tr><td style="${td}">Equipamento</td><td style="${td};text-align:right">${dinheiro(eq)}</td></tr>`+
       `<tr><td style="${td}">Componentes acessórios</td><td style="${td};text-align:right">${dinheiro(ac)}</td></tr>`+
-      b.comp.map(x=>`<tr><td style="${td}">${esc(x.item)}${(Number(x.qtd)||1)>1?' ('+String(x.qtd).padStart(2,'0')+')':''}</td><td style="${td};text-align:right">${dinheiro(num(x.valor)*(Number(x.qtd)||1))}</td></tr>`).join('')+
+      (b.comp||[]).map(x=>`<tr><td style="${td}">${esc(x.item)}${(Number(x.qtd)||1)>1?' ('+String(x.qtd).padStart(2,'0')+')':''}</td><td style="${td};text-align:right">${dinheiro(num(x.valor)*(Number(x.qtd)||1))}</td></tr>`).join('')+
       `<tr><td style="${td};font-weight:800;text-align:right">VALOR TOTAL DO BEM</td><td style="${td};text-align:right;font-weight:800;color:var(--acc)">${dinheiro(eq+ac+cp)}</td></tr></table>`;
   }
   const _ed=editarBem;
