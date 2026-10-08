@@ -435,7 +435,7 @@ body.modoVisu .seloModo{background:rgba(94,227,154,.12);color:#5ee39a;border:1px
   <div class="hrow">
     <div class="marca">
       <span class="logo-vtm" role="img" aria-label="VTM Mídia"></span>
-      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 28.1</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 19:12</b></small></h1>
+      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 28.2</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 19:29</b></small></h1>
     </div>
     <div class="file">
       <span id="semFotos" style="display:none;background:rgba(232,161,58,.15);border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 10px;font-size:12px;margin-left:auto" title="Baixe o arquivo fotos.js e deixe na mesma pasta do index.html">⚠ fotos.js não encontrado — as 153 fotos do relatório não serão exibidas</span>
@@ -622,6 +622,7 @@ body.modoVisu .seloModo{background:rgba(94,227,154,.12);color:#5ee39a;border:1px
         <option value="finA">Financeiro analítico (item a item)</option>
         <option value="nfCom">Bens com nota fiscal (subtotais)</option>
         <option value="nfSem">Bens sem nota fiscal (subtotais)</option>
+        <option value="nfAc">Acessórios com nota fiscal (subtotais)</option>
         <option value="per">Personalizado</option>
         <option value="mov">Movimentação de bens</option>
         
@@ -4506,7 +4507,7 @@ function relNotas(com){
       /* "Bens sem nota fiscal": entra o bem sem nota e entra todo acessório,
          que nunca tem nota própria — inclusive o instalado em bem com nota
          (o bem com nota não aparece; só o acessório dele) */
-      :(!temNF(b)||(compSel()!=='__princ'&&(b.acess||[]).length)));
+      :(!temNF(b)||(compSel()!=='__princ'&&(b.acess||[]).some(a=>!temNFac(a)))));
   const linhaBem=b=>com||!temNF(b);
   const c=document.getElementById('rCat').value, sb=document.getElementById('rSub').value;
   /* "Bens com nota fiscal" + "Componente acessório": nada se encaixa nas duas
@@ -4574,7 +4575,7 @@ function relNotas(com){
              (com?`<td ${esq}>${esc(b.nfEmissor||'—')}</td><td class="nw">${esc(b.nf||'—')}</td><td class="nw">${br(b.nfData)||'—'}</td>`:'')+
              `<td ${dir}>${x?dinheiro(x):'—'}</td></tr>`;
         }
-        if(verA)(b.acess||[]).forEach(a=>{
+        if(verA)(b.acess||[]).filter(a=>com||!temNFac(a)).forEach(a=>{
           const q=Number(a.qtd)||1, x=num(a.valor)*q; v+=x; na+=q;
           h+=`<tr><td class="nw" style="padding-left:${verP?38:24}px">${verP?'└ ':''}<b>${esc(b.cod)}</b><span class="m">acessório</span></td>`+
              `<td ${esq}>${esc(a.item||'—')} · qtd ${String(q).padStart(2,'0')}</td><td>${esc(locDe(b)||'—')}</td>`+
@@ -4750,6 +4751,7 @@ function gerarRelatorio(){
   if(document.getElementById('rModelo').value==='finA')return relFinanceiro(true);
   if(document.getElementById('rModelo').value==='nfCom')return relNotas(true);
   if(document.getElementById('rModelo').value==='nfSem')return relNotas(false);
+  if(document.getElementById('rModelo').value==='nfAc')return relAcNF();
   if(document.getElementById('rModelo').value==='mov')return relMovimentos();
   if(document.getElementById('rModelo').value==='cruz')return relCruzado();
   if(document.getElementById('rModelo').value==='etq')return relEtiquetagem();
@@ -6322,6 +6324,93 @@ if(avisoFabrica)setTimeout(()=>toast(avisoFabrica+' registro(s) atualizados com 
 })();
 </script>
 <script>
+/* ---------- nota fiscal e informações contábeis de cada acessório ---------- */
+const AC_PERG={1:'Equipamento com nota fiscal',2:'Equipamento pertencente e contabilizado em empresas existentes',
+  3:'Equipamento pertencente a pessoas físicas e declarados no imposto de renda',4:'Equipamento com nota fiscal, mas sem registro contábil',
+  5:'Equipamento sem nota fiscal ou outro registro formal',6:'Equipamento pertencente a terceiros ou sujeito a algum ônus'};
+const temNFac=a=>!!(a&&(a.nf||a.nfEmissor||a.nfData));
+(function(){
+  const aberto=new Set();
+  const inp='width:100%;box-sizing:border-box';
+  function painel(a,i){
+    let h='<div class="acCt" style="padding:8px 4px 4px">';
+    [1,2,3,4,5,6].forEach(n=>{
+      const v=a['cont'+n]||'';
+      h+=`<div class="ct${v==='SIM'?' on':''}"><div class="ctp"><b>3.${n} *</b> ${AC_PERG[n]} <span class="ctr">`+
+         ['SIM','NÃO'].map(o=>`<label><input type="radio" class="acCtR" name="ac${i}c${n}" data-i="${i}" data-n="${n}" value="${o}" ${v===o?'checked':''}> ${o}</label>`).join('')+
+         `</span></div><div class="ctd" style="${v==='SIM'?'':'display:none'}">`;
+      if(n===1) h+=`<label>Emissor da nota fiscal<input class="acCtIn" data-i="${i}" data-k="nfEmissor" list="lstEmissores" value="${esc(a.nfEmissor||'')}" placeholder="razão social de quem emitiu a nota" style="${inp}"></label>
+          <div class="grid3"><label>Nº da nota fiscal<input class="acCtIn" data-i="${i}" data-k="nf" value="${esc(a.nf||'')}" placeholder="000.000" style="${inp}"></label>
+          <label>Data de emissão<input type="date" class="acCtIn" data-i="${i}" data-k="nfData" value="${esc(a.nfData||'')}" style="${inp}"></label>
+          <label>Valor (R$)<input value="${esc(a.valor||'')}" disabled style="${inp};text-align:right" title="o valor é o da linha do acessório"></label></div>`;
+      else h+=`<label>Justificar<textarea class="acCtIn" data-i="${i}" data-k="contJust${n}" rows="2" placeholder="justifique este item" style="${inp}">${esc(a['contJust'+n]||'')}</textarea></label>`;
+      h+='</div></div>';
+    });
+    return h+'</div>';
+  }
+  const _r=acessRender;
+  acessRender=function(){
+    _r.apply(this,arguments);
+    const el=document.getElementById('acLista'); if(!el)return;
+    el.querySelectorAll('tr').forEach(tr=>{
+      const e=tr.querySelector('input.acEd'); if(!e)return;
+      const i=+e.dataset.i, a=acessAtual[i]; if(!a)return;
+      const last=tr.lastElementChild;
+      last.style.whiteSpace='nowrap';
+      const b=document.createElement('button'); b.type='button'; b.className='btn sm gh acCtBt'; b.dataset.i=i;
+      b.textContent=(temNFac(a)?'✔ ':'')+'Contábil'; b.title='Nota fiscal e informações contábeis deste acessório';
+      b.style.marginRight='4px'; last.insertBefore(b,last.firstChild);
+      if(aberto.has(i)){ const r=document.createElement('tr'); r.innerHTML=`<td colspan="5" style="border:1px solid var(--line);padding:4px 8px">${painel(a,i)}</td>`; tr.after(r); }
+    });
+  };
+  const el=document.getElementById('acLista');
+  el.addEventListener('click',e=>{ const b=e.target.closest('.acCtBt'); if(!b)return; e.preventDefault();
+    const i=+b.dataset.i; aberto.has(i)?aberto.delete(i):aberto.add(i); acessRender(); });
+  el.addEventListener('change',e=>{ const r=e.target; if(!r.classList.contains('acCtR'))return;
+    const a=acessAtual[+r.dataset.i], n=+r.dataset.n; if(!a)return;
+    a['cont'+n]=r.value;
+    if(r.value!=='SIM'){ if(n===1){ a.nf='';a.nfEmissor='';a.nfData=''; } else a['contJust'+n]=''; }
+    acessRender(); });
+  el.addEventListener('input',e=>{ const t=e.target; if(!t.classList.contains('acCtIn'))return;
+    const a=acessAtual[+t.dataset.i]; if(a)a[t.dataset.k]=t.value; });
+  /* ao abrir outra ficha, os painéis começam fechados */
+  if(typeof editarBem==='function'){ const ed=editarBem; editarBem=function(){ aberto.clear(); return ed.apply(this,arguments); }; }
+})();
+/* ---------- relatório: Acessórios com nota fiscal ---------- */
+function relAcNF(){
+  const cSel=document.getElementById('rCat').value, sSel=document.getElementById('rSub').value;
+  const L=bens.filter(b=>empOk(b)&&emOper(b)&&catOk(b,cSel)&&(!sSel||(sSel==='__sem'?!b.sub:b.sub===sSel))
+                     &&(b.pos||'PRINCIPAL')==='PRINCIPAL'&&(b.acess||[]).some(temNFac));
+  const crit=[cSel||'todas as categorias',sSel].filter(Boolean).join(' · ');
+  let h=cab('Acessórios com nota fiscal',crit);
+  if(!L.length){ fecharRel(h+'<div style="margin:14px 0;color:#666">Nenhum acessório com nota fiscal própria neste recorte.</div>','ACESSÓRIOS COM NOTA FISCAL · nenhum',0,'acessórios'); return; }
+  const dir='style="text-align:right;white-space:nowrap"', esq='style="text-align:left"';
+  h+=`<table><thead><tr><th>Código</th><th ${esq}>Acessório</th><th>Localização</th><th ${esq}>Emissor</th><th>Nº da NF</th><th>Emissão</th><th ${dir}>Valor (R$)</th></tr></thead><tbody>`;
+  let tQ=0,tV=0; const txt=['ACESSÓRIOS COM NOTA FISCAL'];
+  ordCats([...new Set(L.map(b=>b.cat))]).forEach(k=>{
+    const g=L.filter(b=>b.cat===k); let cQ=0,cV=0;
+    h+=`<tr class="sub1"><td colspan="7" style="font-weight:bold">${esc(k)}</td></tr>`; txt.push(k);
+    ordGrupos([...new Set(g.map(b=>b.sub||''))],g,b=>b.sub||'').forEach(sx=>{
+      const gs=g.filter(b=>(b.sub||'')===sx).sort(ordCod); let q=0,v=0; const nome=sx||'sem localização';
+      h+=`<tr><td colspan="7" style="padding-left:14px;font-weight:600;color:#0f6ea8">${esc(nome)}</td></tr>`;
+      gs.forEach(b=>(b.acess||[]).filter(temNFac).forEach(a=>{
+        const qq=Number(a.qtd)||1, x=num(a.valor)*qq; q+=qq; v+=x;
+        h+=`<tr><td class="nw" style="padding-left:24px"><b>${esc(b.cod)}</b></td><td ${esq}>${esc(a.item||'—')} · qtd ${String(qq).padStart(2,'0')}</td>`+
+           `<td>${esc(locDe(b)||'—')}</td><td ${esq}>${esc(a.nfEmissor||'—')}</td><td class="nw">${esc(a.nf||'—')}</td><td class="nw">${br(a.nfData)||'—'}</td><td ${dir}>${x?dinheiro(x):'—'}</td></tr>`;
+        txt.push('  '+b.cod+' · '+(a.item||'')+' · NF '+(a.nf||'—')+' · R$ '+dinheiro(x));
+      }));
+      h+=`<tr><td colspan="6" style="padding-left:14px"><i>Subtotal ${esc(nome)}</i> — ${q} acessório(s)</td><td ${dir}><i>${dinheiro(v)}</i></td></tr>`;
+      cQ+=q; cV+=v;
+    });
+    h+=`<tr class="sub1"><td colspan="6"><b>Total ${esc(k)}</b> — ${cQ} acessório(s)</td><td ${dir}><b>${dinheiro(cV)}</b></td></tr>`;
+    tQ+=cQ; tV+=cV;
+  });
+  h+=`<tr class="tot"><td colspan="6"><b>TOTAL GERAL</b> — ${tQ} acessório(s)</td><td ${dir}><b>${dinheiro(tV)}</b></td></tr></tbody></table>`;
+  txt.push('TOTAL: '+tQ+' acessório(s) · R$ '+dinheiro(tV));
+  fecharRel(h,txt.join('\n'),tQ,'acessórios');
+}
+</script>
+<script>
 /* ---------- acessos: visualizador e editor ---------- */
 (function(){
   const $=i=>document.getElementById(i);
@@ -6358,7 +6447,7 @@ if(avisoFabrica)setTimeout(()=>toast(avisoFabrica+' registro(s) atualizados com 
   const abaRel=document.querySelector('[data-v="relatorio"]'); if(abaRel)abaRel.click();
   /* o telão de LED entra sempre no total do visualizador, numa linha só */
   const ct=$('chkTelao'); if(ct){ if(!ct.checked)ct.click(); const lb=ct.closest('label'); if(lb)lb.style.display='none'; }
-  const BLOQ=['com','finA','nfCom','nfSem'];
+  const BLOQ=['com','finA','nfCom','nfSem','nfAc'];
   const sel=$('rModelo'); if(sel){ [...sel.options].forEach(o=>{ if(BLOQ.includes(o.value))o.remove(); }); if(BLOQ.includes(sel.value))sel.value=sel.options[0].value; }
   if(typeof gerarRelatorio==='function'){ const g=gerarRelatorio; window.gerarRelatorio=function(){ if(BLOQ.includes($('rModelo').value))return toast('Relatório disponível só para o editor.'); return g.apply(this,arguments); }; }
   if(typeof editarBem==='function'){ const ed=editarBem;
