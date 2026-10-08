@@ -409,7 +409,7 @@ td.celAcess{color:#f0c419;font-weight:600}
   <div class="hrow">
     <div class="marca">
       <span class="logo-vtm" role="img" aria-label="VTM Mídia"></span>
-      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 26.9</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 16:39</b></small></h1>
+      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 27.0</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 16:50</b></small></h1>
     </div>
     <div class="file">
       <span id="semFotos" style="display:none;background:rgba(232,161,58,.15);border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 10px;font-size:12px;margin-left:auto" title="Baixe o arquivo fotos.js e deixe na mesma pasta do index.html">⚠ fotos.js não encontrado — as 153 fotos do relatório não serão exibidas</span>
@@ -4333,6 +4333,10 @@ function relFinanceiro(analitico){
                `<td>${esc(x.d)}<span class="m">${x.r}</span></td>`+
                cel(x.p,x.a,x.c)+'</tr>';
           });
+          /* soma do conjunto: o valor total daquela tela */
+          if(lin.length>1)
+            h+=`<tr style="background:#f3f8f7"><td></td><td style="text-align:right;font-weight:700">Total do conjunto ${esc(b.cod)}</td>`+
+               cel(verP?vp:0,verA?va:0,verP?vc:0).replace(/<td /g,'<td style="font-weight:700" ').replace(/style="font-weight:700" style="/g,'style="font-weight:700;')+'</tr>';
         });
         cP+=sP; cA+=sA; cC+=sC;
         if(subs.length>1||sx)
