@@ -409,7 +409,7 @@ td.celAcess{color:#f0c419;font-weight:600}
   <div class="hrow">
     <div class="marca">
       <span class="logo-vtm" role="img" aria-label="VTM Mídia"></span>
-      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 26.7</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 15:48</b></small></h1>
+      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 26.8</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 15:52</b></small></h1>
     </div>
     <div class="file">
       <span id="semFotos" style="display:none;background:rgba(232,161,58,.15);border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 10px;font-size:12px;margin-left:auto" title="Baixe o arquivo fotos.js e deixe na mesma pasta do index.html">⚠ fotos.js não encontrado — as 153 fotos do relatório não serão exibidas</span>
@@ -1335,7 +1335,7 @@ function novaBase(){return JSON.parse(JSON.stringify(BASE))}
 /* Versão do cadastro de fábrica. Ao subir esta constante, os campos que
    vierem preenchidos no arquivo completam os registros já existentes —
    sem tocar em nada que o usuário tenha digitado. */
-const VERSAO_BASE='25.0';
+const VERSAO_BASE='26.8';
 /* ---------- empresa em foco ----------
    O acervo é um só; a empresa escolhida define o recorte que o painel,
    a lista e os relatórios enxergam, e a marca que sai nos documentos.
@@ -1365,7 +1365,7 @@ function empOk(b){ return visivel(b) && (!EMP || (b&&b.empresa===EMP)); }
 function empNome(){ return EMP&&EMPRESAS[EMP]? EMPRESAS[EMP].nome : 'VTM Marketing e Publicidade Ltda · Manaus/AM'; }
 function empLogo(){ return EMP&&EMPRESAS[EMP]? EMPRESAS[EMP].logo : ''; }
 
-const CAMPOS_FABRICA=['patrim','serie','sub','tipo','marca','modelo','dim','cat','desc','local','end','orient','obs'];
+const CAMPOS_FABRICA=['patrim','serie','sub','tipo','marca','modelo','dim','cat','desc','local','end','orient','obs','valor','empresa'];
 function completarDeFabrica(){
   const porCod={};BASE.forEach(b=>porCod[b.cod]=b);
   let n=0;
@@ -1384,6 +1384,10 @@ function completarDeFabrica(){
     if((!Array.isArray(b.acess)||!b.acess.length) && Array.isArray(f.acess) && f.acess.length){
       b.acess=JSON.parse(JSON.stringify(f.acess)); mexeu=true;
     }
+    /* composição do valor (gabinete, mão de obra...) também, se ainda não houver */
+    if((!Array.isArray(b.comp)||!b.comp.length) && Array.isArray(f.comp) && f.comp.length){
+      b.comp=JSON.parse(JSON.stringify(f.comp)); mexeu=true;
+    }
     if(mexeu)n++;
   });
   /* bem que existe no arquivo e ainda não existe neste aparelho entra
@@ -1392,7 +1396,8 @@ function completarDeFabrica(){
   BASE.forEach(f=>{
     if(daqui.has(f.cod+'\u0001'+(f.pos||'PRINCIPAL')))return;
     const novo=JSON.parse(JSON.stringify(f));
-    novo.id=Math.max(0,...bens.map(b=>Number(b.id)||0))+1;
+    /* mantém a identidade do arquivo, para todos os aparelhos terem o mesmo bem */
+    if(bens.some(b=>Number(b.id)===Number(f.id)))novo.id=Math.max(0,...bens.map(b=>Number(b.id)||0))+1;
     bens.push(novo); n++;
   });
   return n;
