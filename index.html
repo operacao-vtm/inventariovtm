@@ -409,7 +409,7 @@ td.celAcess{color:#f0c419;font-weight:600}
   <div class="hrow">
     <div class="marca">
       <span class="logo-vtm" role="img" aria-label="VTM Mídia"></span>
-      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 26.8</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 15:52</b></small></h1>
+      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 26.9</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 16:39</b></small></h1>
     </div>
     <div class="file">
       <span id="semFotos" style="display:none;background:rgba(232,161,58,.15);border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 10px;font-size:12px;margin-left:auto" title="Baixe o arquivo fotos.js e deixe na mesma pasta do index.html">⚠ fotos.js não encontrado — as 153 fotos do relatório não serão exibidas</span>
@@ -4290,72 +4290,79 @@ function relFinanceiro(analitico){
   /* coluna de dinheiro: cabeçalho e conteúdo à direita */
   const cab3=()=>'<tr>'+
     (analitico?'<th>Código</th><th>Equipamento</th>':'<th>Categoria</th>')+
-    (verP?`<th ${dir}>Valor principal + composição (R$)</th>`:'')+
+    (verP?`<th ${dir}>Valor principal (R$)</th>`:'')+
     (verA?`<th ${dir}>Valor acessórios (R$)</th>`:'')+
+    (verP?`<th ${dir}>Composição (R$)</th>`:'')+
     `<th ${dir}>Total (R$)</th></tr>`;
-  const cel=(p,a)=>(verP?`<td ${dir}>${p?dinheiro(p):'—'}</td>`:'')+
+  const cel=(p,a,c)=>{ c=c||0; return (verP?`<td ${dir}>${p?dinheiro(p):'—'}</td>`:'')+
                    (verA?`<td ${dir}>${a?dinheiro(a):'—'}</td>`:'')+
-                   `<td ${dir}><b>${dinheiro((verP?p:0)+(verA?a:0))}</b></td>`;
+                   (verP?`<td ${dir}>${c?dinheiro(c):'—'}</td>`:'')+
+                   `<td ${dir}><b>${dinheiro((verP?p+c:0)+(verA?a:0))}</b></td>`; };
+  const nCol=1+(analitico?1:0)+(verP?2:0)+(verA?1:0)+1;
 
-  let tP=0,tA=0;
+  let tP=0,tA=0,tC=0;
   h+='<table><thead>'+cab3()+'</thead><tbody>';
 
   if(analitico){
     /* bem a bem, agrupado por categoria e subcategoria, com subtotais */
     const cats=ordCats([...new Set(L.map(b=>b.cat))]);
     cats.forEach(k=>{
-      const g=L.filter(b=>b.cat===k); let cP=0,cA=0;
-      h+=`<tr class="sub1"><td colspan="${1+(analitico?1:0)+(verP?1:0)+(verA?1:0)+1}" style="font-weight:bold">${esc(k)}</td></tr>`;
+      const g=L.filter(b=>b.cat===k); let cP=0,cA=0,cC=0;
+      h+=`<tr class="sub1"><td colspan="${nCol}" style="font-weight:bold">${esc(k)}</td></tr>`;
       const subs=ordGrupos([...new Set(g.map(b=>b.sub||''))],g,b=>b.sub||'');
       subs.forEach(sx=>{
-        const gs=g.filter(b=>(b.sub||'')===sx); let sP=0,sA=0;
+        const gs=g.filter(b=>(b.sub||'')===sx); let sP=0,sA=0,sC=0;
         if(subs.length>1||sx)
-          h+=`<tr><td colspan="${1+(analitico?1:0)+(verP?1:0)+(verA?1:0)+1}" style="padding-left:18px;color:#555">${esc(sx||'sem localização')}</td></tr>`;
+          h+=`<tr><td colspan="${nCol}" style="padding-left:18px;color:#555">${esc(sx||'sem localização')}</td></tr>`;
         gs.forEach(b=>{
-          const vp=(valPrinc(b)+valComp(b)), va=valAcess(b); sP+=vp; sA+=va;
+          const vp=valPrinc(b), va=valAcess(b), vc=valComp(b); sP+=vp; sA+=va; sC+=vc;
           /* a descrição segue a seleção: principal, acessório, ou os dois,
              cada um em sua linha, para ficar claro quantos equipamentos há */
           const lin=[];
-          if(verP)lin.push({d:(b.desc||b.tipo||''),r:'componente principal',p:vp,a:0});
+          if(verP)lin.push({d:(b.desc||b.tipo||''),r:'componente principal',p:vp,a:0,c:0});
           if(verA)(b.acess||[]).forEach(x=>lin.push({
             d:String(x.qtd||1).padStart(2,'0')+' '+x.item, r:'componente acessório',
-            p:0, a:num(x.valor)*(Number(x.qtd)||1)}));
+            p:0, a:num(x.valor)*(Number(x.qtd)||1), c:0}));
+          /* composição: cada item na sua linha, com o seu valor */
+          if(verP)(b.comp||[]).forEach(x=>lin.push({
+            d:String(x.qtd||1).padStart(2,'0')+' '+x.item, r:'composição',
+            p:0, a:0, c:num(x.valor)*(Number(x.qtd)||1)}));
           if(!lin.length)return;
           lin.forEach((x,i)=>{
             h+=`<tr><td>${i===0?esc(b.cod):''}</td>`+
                `<td>${esc(x.d)}<span class="m">${x.r}</span></td>`+
-               cel(x.p,x.a)+'</tr>';
+               cel(x.p,x.a,x.c)+'</tr>';
           });
         });
-        cP+=sP; cA+=sA;
+        cP+=sP; cA+=sA; cC+=sC;
         if(subs.length>1||sx)
-          h+=`<tr><td colspan="2" style="padding-left:18px"><i>Subtotal ${esc(sx||'sem localização')}</i></td>`+cel(sP,sA)+'</tr>';
+          h+=`<tr><td colspan="2" style="padding-left:18px"><i>Subtotal ${esc(sx||'sem localização')}</i></td>`+cel(sP,sA,sC)+'</tr>';
       });
-      tP+=cP; tA+=cA;
-      h+=`<tr class="sub1"><td colspan="2"><b>Subtotal ${esc(k)}</b></td>`+cel(cP,cA)+'</tr>';
+      tP+=cP; tA+=cA; tC+=cC;
+      h+=`<tr class="sub1"><td colspan="2"><b>Subtotal ${esc(k)}</b></td>`+cel(cP,cA,cC)+'</tr>';
     });
   }else{
     /* somado por categoria, com as subcategorias por baixo */
     const cats=ordCats([...new Set(L.map(b=>b.cat))]);
     cats.forEach(k=>{
       const g=L.filter(b=>b.cat===k);
-      const cP=g.reduce((a,b)=>a+(valPrinc(b)+valComp(b)),0), cA=g.reduce((a,b)=>a+valAcess(b),0);
-      tP+=cP; tA+=cA;
-      h+=`<tr class="sub1"><td style="font-weight:bold">${esc(k)}</td>`+cel(cP,cA)+'</tr>';
+      const cP=g.reduce((a,b)=>a+valPrinc(b),0), cA=g.reduce((a,b)=>a+valAcess(b),0), cC=g.reduce((a,b)=>a+valComp(b),0);
+      tP+=cP; tA+=cA; tC+=cC;
+      h+=`<tr class="sub1"><td style="font-weight:bold">${esc(k)}</td>`+cel(cP,cA,cC)+'</tr>';
       const subs=ordGrupos([...new Set(g.map(b=>b.sub||''))],g,b=>b.sub||'');
       if(subs.length>1||subs[0])subs.forEach(sx=>{
         const gs=g.filter(b=>(b.sub||'')===sx);
         h+=`<tr><td style="padding-left:22px;color:#555">${esc(sx||'sem localização')}</td>`+
-           cel(gs.reduce((a,b)=>a+(valPrinc(b)+valComp(b)),0),gs.reduce((a,b)=>a+valAcess(b),0))+'</tr>';
+           cel(gs.reduce((a,b)=>a+valPrinc(b),0),gs.reduce((a,b)=>a+valAcess(b),0),gs.reduce((a,b)=>a+valComp(b),0))+'</tr>';
       });
     });
   }
 
-  h+=`<tr class="tot"><td${analitico?' colspan="2"':''}><b>TOTAL GERAL</b></td>`+cel(tP,tA)+'</tr>';
+  h+=`<tr class="tot"><td${analitico?' colspan="2"':''}><b>TOTAL GERAL</b></td>`+cel(tP,tA,tC)+'</tr>';
   h+='</tbody></table>';
   h+=`<div class="tot">${L.length} registro(s) · ${un(L)} unidade(s)</div>`;
   if(!tP)h+='<div style="color:#a00;margin-top:6px">Atenção: o valor de aquisição dos componentes principais ainda não foi preenchido.</div>';
-  fecharRel(h);
+  fecharRel(h,undefined,L.length,'bens');
 }
 
 /* bens com / sem nota fiscal, por categoria, com subtotais e total geral.
