@@ -409,7 +409,7 @@ td.celAcess{color:#f0c419;font-weight:600}
   <div class="hrow">
     <div class="marca">
       <span class="logo-vtm" role="img" aria-label="VTM Mídia"></span>
-      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 27.3</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 17:22</b></small></h1>
+      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 27.4</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 18:00</b></small></h1>
     </div>
     <div class="file">
       <span id="semFotos" style="display:none;background:rgba(232,161,58,.15);border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 10px;font-size:12px;margin-left:auto" title="Baixe o arquivo fotos.js e deixe na mesma pasta do index.html">⚠ fotos.js não encontrado — as 153 fotos do relatório não serão exibidas</span>
@@ -3747,7 +3747,7 @@ function fichaHTML(b){
     ${d?'':l('Orientação',b.orient)}${d?'':l('Status',b.status)}
     ${(b.pos||'PRINCIPAL')==='PRINCIPAL'?`<tr><td colspan="2" style="color:#666;padding-top:6px">Informações contábeis</td></tr>
     <tr><td colspan="2" style="padding:0 0 4px 22px">${contabilHTML(b)}</td></tr>`:''}
-    ${(b.acess&&b.acess.length&&compSel()!=='__princ')?`<tr><td colspan="2" style="color:#666;padding-top:6px">Acessórios</td></tr>
+    ${(b.acess&&b.acess.length&&compSel()!=='__princ'&&!compHTML(b))?`<tr><td colspan="2" style="color:#666;padding-top:6px">Acessórios</td></tr>
     <tr><td colspan="2" style="padding:0 0 4px 22px">${acessHTML(b)}</td></tr>`:''}
     ${compHTML(b)?`<tr><td colspan="2" style="padding:0 0 4px 22px">${compHTML(b)}</td></tr>`:''}
     ${obsLista(b)?`<tr><td style="width:150px;color:#666;vertical-align:top">Observação</td><td>${obsHTML(obsLista(b))}</td></tr>`:''}
@@ -4839,7 +4839,7 @@ function gerarRelatorio(){
           <span class="lb">└ componente acessório</span><br>
           <span class="loc">${esc(b.cat||'—')}${locDe(b)?' · '+esc(locDe(b)):''}</span>
           <span class="lb"> · qtd ${b.qtd||1}</span>
-          <div class="lb" style="margin-top:4px">${acessHTML(b)}${compHTML(b)}</div>
+          <div class="lb" style="margin-top:4px">${compHTML(b)||acessHTML(b)}</div>
         </div>`;
       }
       const fis=[b.nf?'NF '+esc(b.nf):'',b.nfEmissor?esc(b.nfEmissor):'',br(b.nfData),b.valor?'R$ '+esc(b.valor):''].filter(Boolean).join(' · ');
