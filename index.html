@@ -409,7 +409,7 @@ td.celAcess{color:#f0c419;font-weight:600}
   <div class="hrow">
     <div class="marca">
       <span class="logo-vtm" role="img" aria-label="VTM Mídia"></span>
-      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 27.2</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 17:12</b></small></h1>
+      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 27.3</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 17:22</b></small></h1>
     </div>
     <div class="file">
       <span id="semFotos" style="display:none;background:rgba(232,161,58,.15);border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 10px;font-size:12px;margin-left:auto" title="Baixe o arquivo fotos.js e deixe na mesma pasta do index.html">⚠ fotos.js não encontrado — as 153 fotos do relatório não serão exibidas</span>
@@ -4312,8 +4312,9 @@ function relFinanceiro(analitico){
 
   if(analitico){
     /* bem a bem, agrupado por categoria e subcategoria, com subtotais;
-       os telões de LED fecham a lista */
-    const cats=ordCats([...new Set(L.map(b=>b.cat))]).sort((x,y)=>(x==='TELÃO LED')-(y==='TELÃO LED'));
+       no fim ficam os telões de LED e, por último, o reboque */
+    const fim=c=>c==='TELÃO LED'?1:(c==='REBOQUE'?2:0);
+    const cats=ordCats([...new Set(L.map(b=>b.cat))]).sort((x,y)=>fim(x)-fim(y));
     cats.forEach(k=>{
       const g=L.filter(b=>b.cat===k); let cP=0,cA=0,cC=0;
       h+=`<tr class="sub1"><td colspan="${nCol}" style="font-weight:bold">${esc(k)}</td></tr>`;
