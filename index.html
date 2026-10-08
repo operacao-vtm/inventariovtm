@@ -420,6 +420,7 @@ body.modoVisu #mFotoNfCam,body.modoVisu #mFotoNfArq,body.modoVisu #mFotoNfDel,
 body.modoVisu #mAcessBt,body.modoVisu #mObsBt,body.modoVisu #acAdd,
 body.modoVisu #mDel,body.modoVisu #mSubst,body.modoVisu #mRet,body.modoVisu #mInst,
 body.modoVisu #mImp,body.modoVisu #mZap,body.modoVisu #mSalv,
+body.modoVisu [data-v="painel"],body.modoVisu [data-v="bens"],
 body.modoVisu #blCompra,body.modoVisu #blObs,body.modoVisu #mCompBox,body.modoVisu #confBox{display:none!important}
 .seloModo{display:inline-block;margin-left:10px;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:800;letter-spacing:.6px;vertical-align:middle}
 body.modoEd .seloModo{background:rgba(245,149,44,.18);color:#F5952C;border:1px solid #F5952C}
@@ -434,7 +435,7 @@ body.modoVisu .seloModo{background:rgba(94,227,154,.12);color:#5ee39a;border:1px
   <div class="hrow">
     <div class="marca">
       <span class="logo-vtm" role="img" aria-label="VTM Mídia"></span>
-      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 28.0</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 19:03</b></small></h1>
+      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 28.1</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 19:12</b></small></h1>
     </div>
     <div class="file">
       <span id="semFotos" style="display:none;background:rgba(232,161,58,.15);border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 10px;font-size:12px;margin-left:auto" title="Baixe o arquivo fotos.js e deixe na mesma pasta do index.html">⚠ fotos.js não encontrado — as 153 fotos do relatório não serão exibidas</span>
@@ -6353,6 +6354,8 @@ if(avisoFabrica)setTimeout(()=>toast(avisoFabrica+' registro(s) atualizados com 
     toast('Versão de '+V.data+' gerada ('+bens.length+' bens). Suba este index.html no GitHub para o visualizador ver.');
   };
   if(window.MODO_EDITOR)return;
+  /* consulta: só a aba Relatório */
+  const abaRel=document.querySelector('[data-v="relatorio"]'); if(abaRel)abaRel.click();
   /* o telão de LED entra sempre no total do visualizador, numa linha só */
   const ct=$('chkTelao'); if(ct){ if(!ct.checked)ct.click(); const lb=ct.closest('label'); if(lb)lb.style.display='none'; }
   const BLOQ=['com','finA','nfCom','nfSem'];
