@@ -435,7 +435,7 @@ body.modoVisu .seloModo{background:rgba(94,227,154,.12);color:#5ee39a;border:1px
   <div class="hrow">
     <div class="marca">
       <span class="logo-vtm" role="img" aria-label="VTM Mídia"></span>
-      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 28.4</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 19:45</b></small></h1>
+      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 28.6</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 20:18</b></small></h1>
     </div>
     <div class="file">
       <span id="semFotos" style="display:none;background:rgba(232,161,58,.15);border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 10px;font-size:12px;margin-left:auto" title="Baixe o arquivo fotos.js e deixe na mesma pasta do index.html">⚠ fotos.js não encontrado — as 153 fotos do relatório não serão exibidas</span>
@@ -6413,6 +6413,15 @@ function relAcNF(){
 }
 </script>
 <script>
+/* ficha: a área de acessórios fica sempre aberta, para ver, abrir e criar */
+(function(){
+  const ab=()=>{ const l=document.getElementById('lbAcess'); if(l)l.style.display='';
+    const b=document.getElementById('mAcessBt'); if(b)b.style.display='none'; };
+  if(typeof editarBem==='function'){ const ed=editarBem; editarBem=function(){ const r=ed.apply(this,arguments); ab(); setTimeout(ab,0); return r; }; }
+  ab();
+})();
+</script>
+<script>
 /* ---------- acessos: visualizador e editor ---------- */
 (function(){
   const $=i=>document.getElementById(i);
@@ -6449,7 +6458,8 @@ function relAcNF(){
   const abaRel=document.querySelector('[data-v="relatorio"]'); if(abaRel)abaRel.click();
   /* o telão de LED entra sempre no total do visualizador, numa linha só */
   const ct=$('chkTelao'); if(ct){ if(!ct.checked)ct.click(); const lb=ct.closest('label'); if(lb)lb.style.display='none'; }
-  const BLOQ=['com','finA','nfCom','nfSem','nfAc'];
+  /* financeiro analítico liberado na consulta (só com a coluna Total) */
+  const BLOQ=['com','nfCom','nfSem','nfAc'];
   const sel=$('rModelo'); if(sel){ [...sel.options].forEach(o=>{ if(BLOQ.includes(o.value))o.remove(); }); if(BLOQ.includes(sel.value))sel.value=sel.options[0].value; }
   if(typeof gerarRelatorio==='function'){ const g=gerarRelatorio; window.gerarRelatorio=function(){ if(BLOQ.includes($('rModelo').value))return toast('Relatório disponível só para o editor.'); return g.apply(this,arguments); }; }
   if(typeof editarBem==='function'){ const ed=editarBem;
