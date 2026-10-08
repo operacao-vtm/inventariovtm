@@ -435,7 +435,7 @@ body.modoVisu .seloModo{background:rgba(94,227,154,.12);color:#5ee39a;border:1px
   <div class="hrow">
     <div class="marca">
       <span class="logo-vtm" role="img" aria-label="VTM Mídia"></span>
-      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 28.2</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 19:29</b></small></h1>
+      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 28.3</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 19:41</b></small></h1>
     </div>
     <div class="file">
       <span id="semFotos" style="display:none;background:rgba(232,161,58,.15);border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 10px;font-size:12px;margin-left:auto" title="Baixe o arquivo fotos.js e deixe na mesma pasta do index.html">⚠ fotos.js não encontrado — as 153 fotos do relatório não serão exibidas</span>
@@ -4357,15 +4357,16 @@ function relFinanceiro(analitico){
   /* coluna de dinheiro: cabeçalho e conteúdo à direita */
   const cab3=()=>'<tr>'+
     (analitico?'<th>Código</th><th>Equipamento</th>':'<th>Categoria</th>')+
-    (verP?`<th ${dir}>Valor principal (R$)</th>`:'')+
-    (verA?`<th ${dir}>Valor acessórios (R$)</th>`:'')+
-    (verP?`<th ${dir}>Composição (R$)</th>`:'')+
+    (!analitico&&verP?`<th ${dir}>Valor principal (R$)</th>`:'')+
+    (!analitico&&verA?`<th ${dir}>Valor acessórios (R$)</th>`:'')+
+    (!analitico&&verP?`<th ${dir}>Composição (R$)</th>`:'')+
     `<th ${dir}>Total (R$)</th></tr>`;
-  const cel=(p,a,c)=>{ c=c||0; return (verP?`<td ${dir}>${p?dinheiro(p):'—'}</td>`:'')+
-                   (verA?`<td ${dir}>${a?dinheiro(a):'—'}</td>`:'')+
-                   (verP?`<td ${dir}>${c?dinheiro(c):'—'}</td>`:'')+
+  /* no analítico (item a item) fica só a coluna Total */
+  const cel=(p,a,c)=>{ c=c||0; return (!analitico&&verP?`<td ${dir}>${p?dinheiro(p):'—'}</td>`:'')+
+                   (!analitico&&verA?`<td ${dir}>${a?dinheiro(a):'—'}</td>`:'')+
+                   (!analitico&&verP?`<td ${dir}>${c?dinheiro(c):'—'}</td>`:'')+
                    `<td ${dir}><b>${dinheiro((verP?p+c:0)+(verA?a:0))}</b></td>`; };
-  const nCol=1+(analitico?1:0)+(verP?2:0)+(verA?1:0)+1;
+  const nCol=analitico?3:(1+(verP?2:0)+(verA?1:0)+1);
 
   let tP=0,tA=0,tC=0;
   h+='<table><thead>'+cab3()+'</thead><tbody>';
