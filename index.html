@@ -409,7 +409,7 @@ td.celAcess{color:#f0c419;font-weight:600}
   <div class="hrow">
     <div class="marca">
       <span class="logo-vtm" role="img" aria-label="VTM Mídia"></span>
-      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 25.6</b> · 07/10/2026 · <b style="color:var(--acc)">build 07/10 18:32</b></small></h1>
+      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 25.7</b> · 08/10/2026 · <b style="color:var(--acc)">build 08/10 14:16</b></small></h1>
     </div>
     <div class="file">
       <span id="semFotos" style="display:none;background:rgba(232,161,58,.15);border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 10px;font-size:12px;margin-left:auto" title="Baixe o arquivo fotos.js e deixe na mesma pasta do index.html">⚠ fotos.js não encontrado — as 153 fotos do relatório não serão exibidas</span>
@@ -500,6 +500,7 @@ td.celAcess{color:#f0c419;font-weight:600}
         <option value="__acess">Componente acessório</option>
       </select>
       <select id="fCat"><option value="">Todas as categorias</option></select>
+      <select id="fEqp" title="Tipo de equipamento"><option value="">Todos os equipamentos</option><option value="MON">Monitores TV Busão</option><option value="TV42">TV 42"</option><option value="TV50">TV 50"</option><option value="TV65">TV 65"</option><option value="TV70">TV 70"</option></select>
       <select id="fSub"><option value="">Todas as localizações</option></select>
       <select id="fBem" title="Qual bem aparece na lista"><option value="">Todos os bens</option></select>
       <select id="fLocal" style="display:none"><option value="">Localização</option></select>
@@ -2220,7 +2221,7 @@ function fBensLista(){
   const atual=el.value;
   const c=document.getElementById('fCat').value, sb=document.getElementById('fSub').value;
   const l=bens.filter(b=>empOk(b)&&(b.pos||'PRINCIPAL')==='PRINCIPAL'
-                       &&catOk(b,c)
+                       &&eqpOk(b,document.getElementById('fEqp').value)&&catOk(b,c)
                        &&(!sb||(sb==='__sem'?!b.sub:b.sub===sb)))
               .sort((x,y)=>x.cod.localeCompare(y.cod,'pt',{numeric:true,sensitivity:'base'}));
   el.innerHTML='<option value="">Todos os bens</option>'+
@@ -2370,6 +2371,12 @@ function campoBusca(b){
   }[c]||'';
   return String(v).toLowerCase();
 }
+/* filtro por tipo de equipamento (área de Bens) */
+function eqpOk(b,v){
+  if(!v)return true;
+  const tipo=String(b.tipo||'').toUpperCase(), pol=String(b.dim||'').replace(/\D/g,'');
+  return catLista(v).some(k=>k==='MON'?(b.cat==='TV BUSÃO'&&tipo==='MONITOR'):(tipo==='TV'&&'TV'+pol===k));
+}
 function filtrar(){
   const q=document.getElementById('q').value.toLowerCase().trim();
   const c=document.getElementById('fCat').value,l=document.getElementById('fLocal').value,s=document.getElementById('fSt').value;
@@ -2393,7 +2400,8 @@ function filtrar(){
   const compSelB=document.getElementById('fComp').value;
   /* componente acessório: só os bens que têm acessório registrado */
   const compOk=b=>compSelB!=='__acess'||(b.acess||[]).length;
-  return bens.filter(b=>empOk(b)&&(!bemSel||b.cod===bemSel)&&compOk(b)&&vivo(b)&&nivel(b)&&catOk(b,c)&&(!sb||(sb==='__sem'?!b.sub:b.sub===sb))&&(!l||b.local===l)&&(!s||b.status===s)&&noPeriodo(b)&&
+  const eq=document.getElementById('fEqp').value;
+  return bens.filter(b=>empOk(b)&&eqpOk(b,eq)&&(!bemSel||b.cod===bemSel)&&compOk(b)&&vivo(b)&&nivel(b)&&catOk(b,c)&&(!sb||(sb==='__sem'?!b.sub:b.sub===sb))&&(!l||b.local===l)&&(!s||b.status===s)&&noPeriodo(b)&&
     (!q||campoBusca(b).includes(q)));
 }
 /* conjuntos abertos na lista */
@@ -2648,7 +2656,7 @@ function tabelaBens(){
    +(f.length?'':`<tr><td colspan="${mostraLocal()?14:13}" class="mut">Nenhum bem encontrado com esses filtros.</td></tr>`);
 }
 
-['q','qCampo','fComp','fCat','fSub','fBem','fLocal','fSt','fDe','fAte'].forEach(i=>document.getElementById(i).addEventListener('input',()=>{
+['q','qCampo','fComp','fCat','fEqp','fSub','fBem','fLocal','fSt','fDe','fAte'].forEach(i=>document.getElementById(i).addEventListener('input',()=>{
   if(i==='fSub'){
     const s=document.getElementById('fSub').value;
     if(s&&!document.getElementById('fCat').value)document.getElementById('fCat').value=catDaSub(s);
@@ -3137,7 +3145,7 @@ document.getElementById('mValor').addEventListener('input',e=>{
 document.getElementById('mSub').addEventListener('change',subNovoVis);
 document.getElementById('btLimpa').onclick=()=>{
   ['q','fDe','fAte'].forEach(i=>document.getElementById(i).value='');
-  ['fComp','fCat','fSub','fBem','fLocal','fSt'].forEach(i=>document.getElementById(i).value='');
+  ['fComp','fCat','fEqp','fSub','fBem','fLocal','fSt'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('qCampo').value='tudo';
   locais();tabelaBens();toast('Filtros limpos');
 };
@@ -5169,6 +5177,7 @@ function criterios(ctx){
                modelo:'no modelo',local:'na localização',obs:'na observação'}[g('qCampo')];
     if(g('q'))p.push('busca "'+g('q')+'" '+rot);
     if(g('fCat'))p.push('categoria '+g('fCat'));
+    if(g('fEqp')){const e=document.getElementById('fEqp');p.push('equipamento '+e.options[e.selectedIndex].textContent);}
     if(g('fSub'))p.push('subcategoria '+g('fSub'));
     if(g('fLocal'))p.push('localização '+g('fLocal'));
     if(g('fSt'))p.push('status '+g('fSt'));
@@ -6057,7 +6066,9 @@ if(avisoFabrica)setTimeout(()=>toast(avisoFabrica+' registro(s) atualizados com 
   .mcPn input{width:auto;margin:0;accent-color:var(--acc)}
   .mcPn .mcTodas{font-weight:700;border-bottom:1px solid var(--line);border-radius:7px 7px 0 0;margin-bottom:4px}`;
   document.head.appendChild(css);
+  const ROT={fCat:['Todas as categorias','categorias'],rCat:['Todas as categorias','categorias'],fEqp:['Todos os equipamentos','equipamentos']};
   function monta(id){
+    const [rTodos,rPlural]=ROT[id];
     const sel=document.getElementById(id); if(!sel)return;
     const box=document.createElement('span'); box.className='mcBox';
     const bt=document.createElement('button'); bt.type='button'; bt.className='mcBt';
@@ -6070,17 +6081,18 @@ if(avisoFabrica)setTimeout(()=>toast(avisoFabrica+' registro(s) atualizados com 
     sel.parentNode.insertBefore(box,sel); box.appendChild(sel); box.appendChild(bt); box.appendChild(pn);
     sel.style.display='none';
     const cats=()=>[...sel.options].filter(o=>o.value&&!o.hidden).map(o=>o.value);
+    const txt=v=>{ const o=[...sel.options].find(o=>o.value===v&&!o.hidden); return o?o.textContent:v; };
     let vazio=false;   /* "Selecionar tudo" desmarcado: caixas limpas até a pessoa escolher */
     const marcadas=()=>{ if(vazio)return []; const v=sel.value; return v?catLista(v):cats(); };
     function rotulo(){
       const v=sel.value, l=catLista(v);
-      bt.textContent=!v?'Todas as categorias':(l.length===1?l[0]:l.length+' categorias');
-      bt.title=!v?'Todas as categorias':l.join(', ');
+      bt.textContent=!v?rTodos:(l.length===1?txt(l[0]):l.length+' '+rPlural);
+      bt.title=!v?rTodos:l.map(txt).join(', ');
     }
     function desenha(){
       const c=cats(), m=marcadas(), todas=c.every(x=>m.includes(x));
       pn.innerHTML=`<label class="mcTodas"><input type="checkbox" data-t="1" ${todas?'checked':''}> Selecionar tudo</label>`+
-        c.map(x=>`<label><input type="checkbox" value="${esc(x)}" ${m.includes(x)?'checked':''}> ${esc(x)}</label>`).join('');
+        c.map(x=>`<label><input type="checkbox" value="${esc(x)}" ${m.includes(x)?'checked':''}> ${esc(txt(x))}</label>`).join('');
     }
     function aplica(lista){
       const c=cats(); lista=c.filter(x=>lista.includes(x));
@@ -6089,7 +6101,7 @@ if(avisoFabrica)setTimeout(()=>toast(avisoFabrica+' registro(s) atualizados com 
       if(lista.length===1)val=lista[0];
       else if(lista.length>1&&lista.length<c.length){
         val=lista.join(' + ');
-        const o=document.createElement('option'); o.value=val; o.textContent=val; o.hidden=true; sel.appendChild(o);
+        const o=document.createElement('option'); o.value=val; o.textContent=lista.map(txt).join(' + '); o.hidden=true; sel.appendChild(o);
       }
       sel.value=val; rotulo();
       sel.dispatchEvent(new Event('input',{bubbles:true}));
@@ -6112,7 +6124,7 @@ if(avisoFabrica)setTimeout(()=>toast(avisoFabrica+' registro(s) atualizados com 
     let ult=null; setInterval(()=>{ const k=sel.value+'|'+sel.options.length; if(k!==ult){ult=k;rotulo(); if(pn.classList.contains('on'))desenha();} },400);
     rotulo();
   }
-  ['fCat','rCat'].forEach(monta);
+  ['fCat','fEqp','rCat'].forEach(monta);
 })();
 </script>
 </body>
