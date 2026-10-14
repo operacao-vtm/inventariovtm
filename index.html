@@ -435,7 +435,7 @@ body.modoVisu .seloModo{background:rgba(94,227,154,.12);color:#5ee39a;border:1px
   <div class="hrow">
     <div class="marca">
       <span class="logo-vtm" role="img" aria-label="VTM Mídia"></span>
-      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 29.8</b> · 13/10/2026 · <b style="color:var(--acc)">build 13/10 19:49</b></small></h1>
+      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 29.9</b> · 14/10/2026 · <b style="color:var(--acc)">build 14/10 13:02</b></small></h1>
     </div>
     <div class="file">
       <span id="semFotos" style="display:none;background:rgba(232,161,58,.15);border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 10px;font-size:12px;margin-left:auto" title="Baixe o arquivo fotos.js e deixe na mesma pasta do index.html">⚠ fotos.js não encontrado — as 153 fotos do relatório não serão exibidas</span>
@@ -4892,7 +4892,8 @@ function gerarRelatorio(){
   /* item 2: todos os bens do recorte; quem não tem nota aparece marcado
      "sem nota fiscal", para o relatório dar a visão completa */
   const temNFb=b=>!!(b.nfEmissor||b.nf||b.nfData||b.valor);
-  const comNF=(document.getElementById('rModelo').value==='res'||!tc?[]
+  /* modo consulta: o item "Informações de compra" não sai, em nenhuma empresa */
+  const comNF=(document.getElementById('rModelo').value==='res'||!tc||!window.MODO_EDITOR?[]
     :f.filter(b=>!temNFb(b)||noPer(b.nfData)));
   const comNFo=ordHier(comNF);
   /* campo de componentes: cada subcategoria sai em até dois itens —
