@@ -7,6 +7,8 @@
 -->
 <html lang="pt-BR">
 <head>
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+<meta name="googlebot" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0b1f24">
@@ -435,7 +437,7 @@ body.modoVisu .seloModo{background:rgba(94,227,154,.12);color:#5ee39a;border:1px
   <div class="hrow">
     <div class="marca">
       <span class="logo-vtm" role="img" aria-label="VTM Mídia"></span>
-      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 29.9</b> · 14/10/2026 · <b style="color:var(--acc)">build 14/10 13:02</b></small></h1>
+      <h1>PATRIMÔNIO VTM — DIRETORIA<small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 30.0</b> · 14/10/2026 · <b style="color:var(--acc)">build 14/10 14:46</b></small></h1>
     </div>
     <div class="file">
       <span id="semFotos" style="display:none;background:rgba(232,161,58,.15);border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 10px;font-size:12px;margin-left:auto" title="Baixe o arquivo fotos.js e deixe na mesma pasta do index.html">⚠ fotos.js não encontrado — as 153 fotos do relatório não serão exibidas</span>
@@ -1157,7 +1159,7 @@ const FOTOS_NF_BASE={};
 </script>
 <!-- endereço e senha da planilha, gravados pelo Gerar sistema completo -->
 <script>
-const NUVEM_BASE={url:'https://script.google.com/macros/s/AKfycbw6Cc5foaNDmaYpbe3vgzX6OhKMSTcB9Bok39joPI3yUuP8pvWo3zFouyZUXSUKFiiCGw/exec',auto:true};
+const NUVEM_BASE={url:'https://script.google.com/macros/s/AKfycbw6Cc5foaNDmaYpbe3vgzX6OhKMSTcB9Bok39joPI3yUuP8pvWo3zFouyZUXSUKFiiCGw/exec',senha:'VTMpat-0fBTDI63mHqULQ',auto:true};
 </script>
 <script>
 const STATUS=["ATIVO","PERIFÉRICO","SUBSTITUÍDO"];
@@ -1879,7 +1881,7 @@ function nvCfg(){
      o que a pessoa digitar neste aparelho tem preferência */
   const url=base.url||c.url||'';
   /* arquivo distribuído já com endereço: sincroniza sem ninguém configurar nada */
-  return {url:url, senha:c.senha||base.senha||'',
+  return {url:url, senha:base.senha||c.senha||'',
           quem:c.quem||'', auto:((base.url&&url===base.url)?true:(c.auto!==undefined?c.auto:(base.auto!==undefined?!!base.auto:!!url))),
           ultimo:c.ultimo||''};
 }
