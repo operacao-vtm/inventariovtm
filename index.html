@@ -445,7 +445,7 @@ body.modoVisu .seloModo{background:rgba(94,227,154,.12);color:#5ee39a;border:1px
   <div class="hrow">
     <div class="marca">
       <span class="logo-vtm" role="img" aria-label="VTM Mídia"></span>
-      <h1>PATRIMÔNIO VTM — DIRETORIA<span class="seloModo">MODO EDITOR</span><small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 31.0 · Supabase</b> · 14/10/2026 · <b style="color:var(--acc)">build 14/10 14:46</b></small></h1>
+      <h1>PATRIMÔNIO VTM — DIRETORIA<span class="seloModo">MODO EDITOR</span><small>VTM Marketing e Publicidade Ltda · Manaus/AM · <b style="color:var(--marca-c)">versão 32.0 · Supabase</b> · 14/10/2026 · <b style="color:var(--acc)">build 14/10 14:46</b></small></h1>
     </div>
     <div class="file">
       <span id="semFotos" style="display:none;background:rgba(232,161,58,.15);border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:5px 10px;font-size:12px;margin-left:auto" title="Baixe o arquivo fotos.js e deixe na mesma pasta do index.html">⚠ fotos.js não encontrado — as 153 fotos do relatório não serão exibidas</span>
@@ -5911,6 +5911,61 @@ else{
       psbLer().then(d=>{ try{ VISU.bens=d.bens; VISU.data=new Date().toLocaleString('pt-BR').slice(0,16); tudo(); }catch(e){} }).catch(()=>{});
     }
   }).catch(e=>{ if(/acesso|expirou|401|403/.test(e.message)){ psbGuarda(null); patMostraLogin(); } });
+}
+
+/* =====================================================================
+   v32 — PARA LANÇAR NO PATRIMÔNIO
+   Equipamentos que entraram no almoxarifado (ou trocas sem lugar) e que o
+   Patrimônio ainda não conhece. O editor cadastra (a ficha abre já com o S/N)
+   ou marca como resolvido.
+   ===================================================================== */
+let patPend=[];
+async function patPendCarregar(){
+  if(!psbAuth||!window.MODO_EDITOR) return;
+  try{
+    patPend=await (await psb('/rest/v1/patrimonio_pendencias?select=*&resolvido=eq.false&order=criado_em.desc&limit=300')).json()||[];
+    const b=document.getElementById('patPendBt');
+    if(b){ b.style.display=patPend.length?'':'none'; b.textContent='📥 Para lançar ('+patPend.length+')'; }
+    if(document.getElementById('patPendBox')&&document.getElementById('patPendBox').style.display==='flex') patPendDesenha();
+  }catch(e){}
+}
+function patPendDesenha(){
+  const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const L=document.getElementById('patPendLista');
+  L.innerHTML=patPend.length?patPend.map(p=>'<div style="border:1px solid #3a3a46;border-radius:10px;padding:10px 12px;margin:0 0 8px;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center">'+
+    '<div><b>'+esc(p.sn||'sem S/N')+'</b> · '+esc(p.material||'')+'<div style="font-size:12px;opacity:.75;margin-top:3px">'+
+    (p.tipo==='entrada'?'entrada':'troca sem lugar')+(p.ref?' · '+esc(p.ref):'')+(p.os?' · '+esc(p.os):'')+(p.destino?' · '+esc(p.destino):'')+' · '+new Date(p.criado_em).toLocaleDateString('pt-BR')+'</div>'+
+    '<div style="font-size:12px;opacity:.75">'+esc(p.info||'')+'</div></div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" data-cad="'+p.id+'" style="border:0;border-radius:8px;padding:7px 10px;background:#F58220;color:#fff;font-weight:700;cursor:pointer">Cadastrar</button>'+
+    '<button type="button" data-ok="'+p.id+'" style="border:1px solid #888;border-radius:8px;padding:7px 10px;background:transparent;color:inherit;cursor:pointer">Resolvido</button></div></div>').join('')
+    :'<p style="opacity:.7">Nada para lançar.</p>';
+  L.querySelectorAll('[data-cad]').forEach(b=>b.onclick=()=>patPendCadastrar(Number(b.dataset.cad)));
+  L.querySelectorAll('[data-ok]').forEach(b=>b.onclick=()=>patPendResolver(Number(b.dataset.ok)));
+}
+function patPendAbrir(){ document.getElementById('patPendBox').style.display='flex'; patPendDesenha(); }
+function patPendFechar(){ document.getElementById('patPendBox').style.display='none'; }
+function patPendCadastrar(id){
+  const p=patPend.find(x=>x.id===id); if(!p) return;
+  patPendFechar();
+  editarBem(0);   /* a ficha "INSERIR NOVO BEM" */
+  const v=(i,x)=>{ const e=document.getElementById(i); if(e&&x) e.value=x; };
+  v('mSerie',p.sn); if(p.tipo==='entrada') v('mNf',p.ref);
+  v('mObs','Entrou no almoxarifado: '+(p.material||'')+(p.ref?' · '+p.ref:'')+(p.os?' · '+p.os:''));
+  toast('Ficha aberta com o S/N '+(p.sn||'')+'. Depois de salvar, marque como resolvido em "Para lançar".');
+}
+async function patPendResolver(id){
+  try{ await psb('/rest/v1/patrimonio_pendencias?id=eq.'+id,{method:'PATCH',body:JSON.stringify({resolvido:true}),headers:{Prefer:'return=minimal'}}); }
+  catch(e){ toast('Não foi possível marcar: '+e.message); return; }
+  patPend=patPend.filter(x=>x.id!==id); patPendDesenha(); patPendCarregar();
+}
+if(psbAuth&&window.MODO_EDITOR){
+  document.body.insertAdjacentHTML('beforeend','<button id="patPendBt" type="button" onclick="patPendAbrir()" style="display:none;position:fixed;right:70px;bottom:12px;z-index:9000;border:0;background:#F58220;color:#fff;border-radius:999px;padding:7px 14px;font:700 12px inherit;cursor:pointer">📥 Para lançar</button>'+
+    '<div id="patPendBox" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(8,10,16,.75);align-items:center;justify-content:center;padding:16px">'+
+    '<div style="background:#1b1a22;color:#ececf3;border-radius:14px;padding:16px 16px 10px;max-width:640px;width:100%;max-height:85vh;overflow:auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><b style="font-size:16px">📥 Para lançar no Patrimônio</b>'+
+    '<button type="button" onclick="patPendFechar()" style="border:1px solid #888;border-radius:8px;padding:5px 10px;background:transparent;color:inherit;cursor:pointer">Fechar</button></div>'+
+    '<p style="font-size:12.5px;opacity:.75;margin:0 0 10px">Equipamentos que passaram pelo almoxarifado e ainda não estão no Patrimônio.</p><div id="patPendLista"></div></div></div>');
+  patPendCarregar(); setInterval(patPendCarregar,60000);
 }
 
 (async()=>{
